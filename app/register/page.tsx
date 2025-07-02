@@ -8,7 +8,7 @@ import api from "@/lib/api"
 import { tokenManager } from "@/lib/auth"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
-import { User, Mail, Lock, Phone, Hash, Building, Eye, EyeOff, UserPlus, ArrowRight, Shield, CheckCircle, AlertCircle } from 'lucide-react'
+import { User, Mail, Lock, Phone, Hash, Building, Eye, EyeOff, Fuel, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react'
 
 type RegisterData = z.infer<typeof registerSchema>
 
@@ -40,11 +40,11 @@ const watchedFields = watch()
 const onSubmit = async (data: RegisterData) => {
     setIsLoading(true)
     setError(null)
-    
+
     try {
     await api.post("/auth/register", data)
     setSuccess(true)
-    
+
     // Redirect to login after a short delay
     setTimeout(() => {
         router.push("/login")
@@ -68,8 +68,8 @@ if (success) {
         <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-green-400 to-green-500 rounded-full shadow-xl mb-6">
             <CheckCircle className="h-10 w-10 text-white" />
         </div>
-        <h1 className="text-3xl font-bold text-white mb-2">Account Created Successfully!</h1>
-        <p className="text-slate-400 text-lg">Redirecting you to login...</p>
+        <h1 className="text-3xl font-bold text-white mb-2">Registration Successful!</h1>
+        <p className="text-slate-400 text-lg">Welcome to Naftal Employee Rewards. Redirecting to login...</p>
         <div className="w-8 h-8 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto"></div>
         </div>
     </div>
@@ -90,12 +90,12 @@ return (
         {/* Header Section */}
         <div className="text-center mb-8">
         <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl shadow-xl mb-6">
-            <UserPlus className="h-8 w-8 text-slate-900" />
+            <Fuel className="h-8 w-8 text-slate-900" />
         </div>
         <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 bg-clip-text text-transparent mb-2">
-            Join Our Team
+            Join Naftal Rewards
         </h1>
-        <p className="text-slate-400 text-lg">Create your account to get started</p>
+        <p className="text-slate-400 text-lg">Register to participate in amazing trip opportunities</p>
         </div>
 
         {/* Registration Form */}
@@ -369,8 +369,8 @@ return (
         {/* Security Notice */}
         <div className="mt-6 text-center">
         <p className="text-slate-500 text-sm flex items-center justify-center gap-2">
-            <Shield className="h-4 w-4" />
-            Your information is secure and encrypted
+            <Fuel className="h-4 w-4" />
+            Naftal Employee Registration - Secure & Confidential
         </p>
         </div>
     </div>

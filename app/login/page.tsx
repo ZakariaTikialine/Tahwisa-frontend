@@ -8,7 +8,7 @@ import api from "@/lib/api"
 import { tokenManager } from "@/lib/auth"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Shield, AlertCircle } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Fuel, AlertCircle } from 'lucide-react'
 
 type LoginData = z.infer<typeof loginSchema>
 
@@ -36,10 +36,10 @@ const {
 const onSubmit = async (data: LoginData) => {
     setIsLoading(true)
     setError(null)
-    
+
     try {
     const response = await api.post("/auth/login", data)
-    
+
     if (response.data.token) {
         tokenManager.setToken(response.data.token)
         router.push("/dashboard")
@@ -67,12 +67,12 @@ return (
         {/* Logo/Brand Section */}
         <div className="text-center mb-8">
         <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl shadow-xl mb-6">
-            <Shield className="h-8 w-8 text-slate-900" />
+            <Fuel className="h-8 w-8 text-slate-900" />
         </div>
         <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 bg-clip-text text-transparent mb-2">
-            Welcome Back
+            Employee Login
         </h1>
-        <p className="text-slate-400 text-lg">Sign in to access your dashboard</p>
+        <p className="text-slate-400 text-lg">Access your Naftal rewards account</p>
         </div>
 
         {/* Login Form */}
@@ -193,8 +193,8 @@ return (
         {/* Security Notice */}
         <div className="mt-6 text-center">
         <p className="text-slate-500 text-sm flex items-center justify-center gap-2">
-            <Shield className="h-4 w-4" />
-            Your connection is secure and encrypted
+            <Fuel className="h-4 w-4" />
+            Naftal Employee Rewards - Secure Access
         </p>
         </div>
     </div>
