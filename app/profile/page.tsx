@@ -1,180 +1,126 @@
 "use client"
 
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
-import { tokenManager } from "@/lib/auth"
-import { useEffect, useState } from "react"
-import api from "@/lib/api"
+import type React from "react"
+
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { tokenManager } from "@/lib/auth"
+import api from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import {
-User,
-Mail,
-Phone,
-Hash,
-Building,
-Fuel,
-ArrowLeft,
-Save,
-CheckCircle,
-AlertCircle,
-Edit,
-Calendar,
-Shield,
-} from "lucide-react"
-
-// Profile update schema
-const profileSchema = z.object({
-nom: z.string().min(2, "Last name must be at least 2 characters"),
-prénom: z.string().min(2, "First name must be at least 2 characters"),
-email: z.string().email("Please enter a valid email address"),
-téléphone: z.string().min(10, "Phone number must be at least 10 digits"),
-matricule: z.string().min(3, "Employee ID must be at least 3 characters"),
-department: z.string().min(2, "Department must be at least 2 characters"),
-})
-
-type ProfileData = z.infer<typeof profileSchema>
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { User, Mail, Phone, Hash, Building, Save, ArrowLeft, AlertCircle, CheckCircle } from "lucide-react"
+import type { Employee } from "@/lib/types"
 
 export default function ProfilePage() {
-const [user, setUser] = useState<any>(null)
+const [user, setUser] = useState<Employee | null>(null)
+const [formData, setFormData] = useState({
+    nom: "",
+    prénom: "",
+    email: "",
+    téléphone: "",
+    matricule: "",
+    department: "",
+    password: "",
+})
 const [loading, setLoading] = useState(true)
-const [updating, setUpdating] = useState(false)
+const [saving, setSaving] = useState(false)
 const [error, setError] = useState<string | null>(null)
 const [success, setSuccess] = useState<string | null>(null)
-const [isEditing, setIsEditing] = useState(false)
 const router = useRouter()
 
-const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-    watch,
-} = useForm<ProfileData>({
-    resolver: zodResolver(profileSchema),
-})
-
-const watchedFields = watch()
-
 useEffect(() => {
-    const fetchUserProfile = async () => {
+    const fetchUserData = async () => {
     try {
-        // Check if token exists
         if (!tokenManager.hasToken()) {
         router.push("/login")
         return
         }
 
-        // Get current user data first to get the ID
-        const currentUserRes = await api.get("/auth/me")
-        const userId = currentUserRes.data.id
-
-        // Fetch detailed profile from employees endpoint
-        const profileRes = await api.get(`/api/employees/${userId}`)
-        const userData = profileRes.data
-
+        const response = await api.get("/auth/me")
+        const userData = response.data
         setUser(userData)
-
-        // Pre-fill the form with current values
-        reset({
-        nom: userData.nom || userData.lastName || "",
-        prénom: userData.prénom || userData.firstName || "",
+        setFormData({
+        nom: userData.nom || "",
+        prénom: userData.prénom || "",
         email: userData.email || "",
-        téléphone: userData.téléphone || userData.phone || "",
-        matricule: userData.matricule || userData.employeeId || "",
+        téléphone: userData.téléphone || "",
+        matricule: userData.matricule || "",
         department: userData.department || "",
+        password: "",
         })
     } catch (err: any) {
-        console.error("Failed to fetch user profile:", err)
-
-        // If unauthorized, clear token and redirect
+        console.error("Failed to fetch user data:", err)
         if (err.response?.status === 401) {
         tokenManager.removeToken()
         router.push("/login")
         } else {
-        setError("Failed to load profile data. Please try refreshing the page.")
+        setError("Failed to load profile data.")
         }
     } finally {
         setLoading(false)
     }
     }
 
-    fetchUserProfile()
-}, [router, reset])
+    fetchUserData()
+}, [router])
 
-const onSubmit = async (data: ProfileData) => {
-    setUpdating(true)
+const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user) return
+
+    setSaving(true)
     setError(null)
     setSuccess(null)
 
     try {
-    const userId = user.id
-    const response = await api.put(`/api/employees/${userId}`, data)
+    const updateData: Partial<typeof formData> = { ...formData }
+    if (!updateData.password) {
+        delete updateData.password
+    }
 
-    // Update local user state with new data
-    setUser({ ...user, ...response.data })
+    await api.put(`/api/employees/${user.id}`, updateData)
     setSuccess("Profile updated successfully!")
-    setIsEditing(false)
 
-    // Clear success message after 3 seconds
-    setTimeout(() => setSuccess(null), 3000)
+    // Clear password field after successful update
+    setFormData((prev) => ({ ...prev, password: "" }))
+
+    setTimeout(() => setSuccess(null), 5000)
     } catch (err: any) {
-    const errorMessage = err.response?.data?.message || "Failed to update profile. Please try again."
+    const errorMessage = err.response?.data?.message || "Failed to update profile"
     setError(errorMessage)
     } finally {
-    setUpdating(false)
+    setSaving(false)
     }
 }
 
-const isFieldValid = (fieldName: string) => {
-    return watchedFields[fieldName as keyof ProfileData] && !errors[fieldName as keyof typeof errors]
-}
-
-const getInitials = () => {
-    if (!user) return "U"
-    const firstName = user.prénom || user.firstName || ""
-    const lastName = user.nom || user.lastName || ""
-    return `${firstName[0] || ""}${lastName[0] || ""}`.toUpperCase()
+const handleInputChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
 }
 
 if (loading) {
     return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-yellow-50 via-blue-50 to-slate-100 px-4">
         <div className="text-center space-y-4">
-        <div className="flex items-center justify-center gap-3 mb-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex items-center justify-center shadow-xl animate-pulse">
-            <Fuel className="h-8 w-8 text-slate-900" />
-            </div>
-        </div>
-        <div className="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-b-4 border-yellow-500 mx-auto"></div>
-        <div className="space-y-2">
-            <p className="text-slate-700 font-medium text-sm sm:text-base">Loading your profile...</p>
-            <p className="text-slate-500 text-xs sm:text-sm">Please wait a moment</p>
-        </div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-yellow-500 mx-auto"></div>
+        <p className="text-slate-700 font-medium">Loading profile...</p>
         </div>
     </div>
     )
 }
 
-if (error && !user) {
+if (!user) {
     return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-yellow-50 via-blue-50 to-slate-100 px-4">
         <div className="text-center space-y-4 max-w-md">
         <AlertCircle className="h-16 w-16 text-red-500 mx-auto" />
-        <h1 className="text-2xl font-bold text-slate-900">Something went wrong</h1>
-        <p className="text-slate-600">{error}</p>
-        <div className="space-x-4">
-            <Button onClick={() => window.location.reload()} className="bg-yellow-500 hover:bg-yellow-600">
-            Try Again
-            </Button>
-            <Button variant="outline" onClick={() => router.push("/dashboard")}>
+        <h1 className="text-2xl font-bold text-slate-900">Profile Not Found</h1>
+        <p className="text-slate-600">Unable to load your profile information.</p>
+        <Button onClick={() => router.push("/dashboard")} className="bg-yellow-500 hover:bg-yellow-600">
             Back to Dashboard
-            </Button>
-        </div>
+        </Button>
         </div>
     </div>
     )
@@ -202,400 +148,199 @@ return (
             </div>
             <div>
                 <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-300 bg-clip-text text-transparent">
-                Employee Profile
+                Profile Settings
                 </h1>
-                <p className="text-slate-400 text-sm sm:text-base">Manage your personal information</p>
+                <p className="text-slate-400 text-sm sm:text-base">Manage your account information</p>
             </div>
-            </div>
-
-            <div className="ml-auto">
-            <Badge className="bg-gradient-to-r from-sky-500 to-sky-400 text-white border-0 px-3 py-1">
-                Naftal Employee
-            </Badge>
             </div>
         </div>
         </div>
     </header>
 
     {/* Main Content */}
-    <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12 space-y-8">
+    <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
+        <div className="max-w-2xl mx-auto space-y-8">
         {/* Success/Error Messages */}
         {success && (
-        <div className="p-4 bg-green-500/20 border border-green-500/30 rounded-xl flex items-center gap-3">
-            <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
-            <p className="text-green-700 font-medium">{success}</p>
-        </div>
+            <Alert className="border-green-200 bg-green-50">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-800">{success}</AlertDescription>
+            </Alert>
         )}
 
         {error && (
-        <div className="p-4 bg-red-500/20 border border-red-500/30 rounded-xl flex items-center gap-3">
-            <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
-            <p className="text-red-700 font-medium">{error}</p>
-        </div>
+            <Alert className="border-red-200 bg-red-50">
+            <AlertCircle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-800">{error}</AlertDescription>
+            </Alert>
         )}
-
-        {/* Profile Overview Card */}
-        <Card className="border-0 shadow-xl overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-slate-800 to-slate-700 text-white p-6 sm:p-8">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4 sm:gap-6">
-                <Avatar className="h-16 w-16 sm:h-20 sm:w-20 border-4 border-yellow-400/30 shadow-xl">
-                <AvatarFallback className="bg-gradient-to-br from-yellow-400 to-yellow-500 text-slate-900 text-xl sm:text-2xl font-bold">
-                    {getInitials()}
-                </AvatarFallback>
-                </Avatar>
-                <div>
-                <CardTitle className="text-xl sm:text-2xl font-bold text-white mb-2">
-                    {user?.prénom || user?.firstName} {user?.nom || user?.lastName}
-                </CardTitle>
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
-                    <Badge className="bg-yellow-500/20 text-yellow-300 border border-yellow-400/30 w-fit">
-                    ID: {user?.matricule || user?.employeeId || "Not assigned"}
-                    </Badge>
-                    <Badge className="bg-sky-500/20 text-sky-300 border border-sky-400/30 w-fit">
-                    {user?.department || "Department not specified"}
-                    </Badge>
-                </div>
-                </div>
-            </div>
-
-            <Button
-                onClick={() => setIsEditing(!isEditing)}
-                className={`${
-                isEditing
-                    ? "bg-red-600 hover:bg-red-700"
-                    : "bg-gradient-to-r from-yellow-500 to-yellow-400 hover:from-yellow-400 hover:to-yellow-300"
-                } text-slate-900 font-semibold`}
-            >
-                <Edit className="h-4 w-4 mr-2" />
-                {isEditing ? "Cancel Edit" : "Edit Profile"}
-            </Button>
-            </div>
-        </CardHeader>
-        </Card>
 
         {/* Profile Form */}
         <Card className="border-0 shadow-xl overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-yellow-500 to-yellow-400 text-slate-900 p-6">
-            <CardTitle className="flex items-center gap-3 text-xl font-bold">
-            <Fuel className="h-6 w-6" />
-            Personal Information
+            <CardHeader className="bg-gradient-to-r from-slate-800 to-slate-700 text-white p-6">
+            <CardTitle className="flex items-center gap-3 text-xl">
+                <User className="h-6 w-6 text-yellow-400" />
+                Employee Information
             </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6 sm:p-8 bg-gradient-to-br from-white to-slate-50">
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-            {/* Personal Information Section */}
-            <div className="space-y-6">
+            </CardHeader>
+            <CardContent className="p-6 bg-gradient-to-br from-white to-slate-50">
+            <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Personal Information */}
+                <div className="space-y-6">
                 <div className="flex items-center gap-3 pb-2 border-b border-slate-200">
-                <User className="h-5 w-5 text-yellow-500" />
-                <h3 className="text-lg font-semibold text-slate-900">Personal Details</h3>
+                    <User className="h-5 w-5 text-yellow-500" />
+                    <h3 className="text-lg font-semibold text-slate-900">Personal Information</h3>
                 </div>
 
-                {/* Name Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-slate-700 uppercase tracking-wide">
-                    Last Name (Nom)
-                    </label>
+                    <div className="space-y-2">
+                    <Label htmlFor="nom" className="text-sm font-semibold text-slate-700">
+                        Last Name
+                    </Label>
                     <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <User className="h-5 w-5 text-slate-400" />
+                        <User className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                        <Input
+                        id="nom"
+                        value={formData.nom}
+                        onChange={(e) => handleInputChange("nom", e.target.value)}
+                        className="pl-10 bg-white border-slate-300 focus:border-yellow-400 focus:ring-yellow-400"
+                        required
+                        />
                     </div>
-                    <input
-                        {...register("nom")}
-                        disabled={!isEditing}
-                        className={`w-full pl-12 pr-10 py-4 border rounded-xl transition-all duration-300 outline-none ${
-                        isEditing
-                            ? "bg-white border-slate-300 focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-slate-900"
-                            : "bg-slate-100 border-slate-200 text-slate-600 cursor-not-allowed"
-                        }`}
-                        placeholder="Enter your last name"
-                    />
-                    {isFieldValid("nom") && isEditing && (
-                        <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                        </div>
-                    )}
                     </div>
-                    {errors.nom && (
-                    <p className="text-sm text-red-500 mt-2 flex items-center gap-2">
-                        <span className="w-1 h-1 bg-red-500 rounded-full"></span>
-                        {errors.nom.message}
-                    </p>
-                    )}
+
+                    <div className="space-y-2">
+                    <Label htmlFor="prénom" className="text-sm font-semibold text-slate-700">
+                        First Name
+                    </Label>
+                    <div className="relative">
+                        <User className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                        <Input
+                        id="prénom"
+                        value={formData.prénom}
+                        onChange={(e) => handleInputChange("prénom", e.target.value)}
+                        className="pl-10 bg-white border-slate-300 focus:border-yellow-400 focus:ring-yellow-400"
+                        required
+                        />
+                    </div>
+                    </div>
                 </div>
 
                 <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-slate-700 uppercase tracking-wide">
-                    First Name (Prénom)
-                    </label>
-                    <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <User className="h-5 w-5 text-slate-400" />
-                    </div>
-                    <input
-                        {...register("prénom")}
-                        disabled={!isEditing}
-                        className={`w-full pl-12 pr-10 py-4 border rounded-xl transition-all duration-300 outline-none ${
-                        isEditing
-                            ? "bg-white border-slate-300 focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-slate-900"
-                            : "bg-slate-100 border-slate-200 text-slate-600 cursor-not-allowed"
-                        }`}
-                        placeholder="Enter your first name"
-                    />
-                    {isFieldValid("prénom") && isEditing && (
-                        <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                        </div>
-                    )}
-                    </div>
-                    {errors.prénom && (
-                    <p className="text-sm text-red-500 mt-2 flex items-center gap-2">
-                        <span className="w-1 h-1 bg-red-500 rounded-full"></span>
-                        {errors.prénom.message}
-                    </p>
-                    )}
-                </div>
-                </div>
-
-                {/* Email Field */}
-                <div className="space-y-2">
-                <label className="block text-sm font-semibold text-slate-700 uppercase tracking-wide">
+                    <Label htmlFor="email" className="text-sm font-semibold text-slate-700">
                     Email Address
-                </label>
-                <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-slate-400" />
-                    </div>
-                    <input
-                    {...register("email")}
-                    type="email"
-                    disabled={!isEditing}
-                    className={`w-full pl-12 pr-10 py-4 border rounded-xl transition-all duration-300 outline-none ${
-                        isEditing
-                        ? "bg-white border-slate-300 focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-slate-900"
-                        : "bg-slate-100 border-slate-200 text-slate-600 cursor-not-allowed"
-                    }`}
-                    placeholder="Enter your email address"
+                    </Label>
+                    <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                    <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => handleInputChange("email", e.target.value)}
+                        className="pl-10 bg-white border-slate-300 focus:border-yellow-400 focus:ring-yellow-400"
+                        required
                     />
-                    {isFieldValid("email") && isEditing && (
-                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
-                        <CheckCircle className="h-5 w-5 text-green-500" />
                     </div>
-                    )}
-                </div>
-                {errors.email && (
-                    <p className="text-sm text-red-500 mt-2 flex items-center gap-2">
-                    <span className="w-1 h-1 bg-red-500 rounded-full"></span>
-                    {errors.email.message}
-                    </p>
-                )}
                 </div>
 
-                {/* Phone Field */}
                 <div className="space-y-2">
-                <label className="block text-sm font-semibold text-slate-700 uppercase tracking-wide">
-                    Phone Number (Téléphone)
-                </label>
-                <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Phone className="h-5 w-5 text-slate-400" />
-                    </div>
-                    <input
-                    {...register("téléphone")}
-                    type="tel"
-                    disabled={!isEditing}
-                    className={`w-full pl-12 pr-10 py-4 border rounded-xl transition-all duration-300 outline-none ${
-                        isEditing
-                        ? "bg-white border-slate-300 focus:ring-2 focus:ring-sky-400 focus:border-transparent text-slate-900"
-                        : "bg-slate-100 border-slate-200 text-slate-600 cursor-not-allowed"
-                    }`}
-                    placeholder="Enter your phone number"
+                    <Label htmlFor="password" className="text-sm font-semibold text-slate-700">
+                    New Password (leave blank to keep current)
+                    </Label>
+                    <Input
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => handleInputChange("password", e.target.value)}
+                    className="bg-white border-slate-300 focus:border-yellow-400 focus:ring-yellow-400"
+                    placeholder="Enter new password"
                     />
-                    {isFieldValid("téléphone") && isEditing && (
-                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                    </div>
-                    )}
                 </div>
-                {errors.téléphone && (
-                    <p className="text-sm text-red-500 mt-2 flex items-center gap-2">
-                    <span className="w-1 h-1 bg-red-500 rounded-full"></span>
-                    {errors.téléphone.message}
-                    </p>
-                )}
                 </div>
-            </div>
 
-            {/* Professional Information Section */}
-            <div className="space-y-6">
+                {/* Professional Information */}
+                <div className="space-y-6">
                 <div className="flex items-center gap-3 pb-2 border-b border-slate-200">
-                <Building className="h-5 w-5 text-sky-500" />
-                <h3 className="text-lg font-semibold text-slate-900">Professional Information</h3>
+                    <Building className="h-5 w-5 text-sky-500" />
+                    <h3 className="text-lg font-semibold text-slate-900">Professional Information</h3>
                 </div>
 
-                {/* Employee ID and Department */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-slate-700 uppercase tracking-wide">
-                    Employee ID (Matricule)
-                    </label>
+                    <div className="space-y-2">
+                    <Label htmlFor="téléphone" className="text-sm font-semibold text-slate-700">
+                        Phone Number
+                    </Label>
                     <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Hash className="h-5 w-5 text-slate-400" />
+                        <Phone className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                        <Input
+                        id="téléphone"
+                        type="tel"
+                        value={formData.téléphone}
+                        onChange={(e) => handleInputChange("téléphone", e.target.value)}
+                        className="pl-10 bg-white border-slate-300 focus:border-sky-400 focus:ring-sky-400"
+                        required
+                        />
                     </div>
-                    <input
-                        {...register("matricule")}
-                        disabled={!isEditing}
-                        className={`w-full pl-12 pr-10 py-4 border rounded-xl transition-all duration-300 outline-none ${
-                        isEditing
-                            ? "bg-white border-slate-300 focus:ring-2 focus:ring-sky-400 focus:border-transparent text-slate-900"
-                            : "bg-slate-100 border-slate-200 text-slate-600 cursor-not-allowed"
-                        }`}
-                        placeholder="Enter your employee ID"
-                    />
-                    {isFieldValid("matricule") && isEditing && (
-                        <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                        </div>
-                    )}
                     </div>
-                    {errors.matricule && (
-                    <p className="text-sm text-red-500 mt-2 flex items-center gap-2">
-                        <span className="w-1 h-1 bg-red-500 rounded-full"></span>
-                        {errors.matricule.message}
-                    </p>
-                    )}
+
+                    <div className="space-y-2">
+                    <Label htmlFor="matricule" className="text-sm font-semibold text-slate-700">
+                        Employee ID
+                    </Label>
+                    <div className="relative">
+                        <Hash className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                        <Input
+                        id="matricule"
+                        value={formData.matricule}
+                        onChange={(e) => handleInputChange("matricule", e.target.value)}
+                        className="pl-10 bg-white border-slate-300 focus:border-sky-400 focus:ring-sky-400"
+                        required
+                        />
+                    </div>
+                    </div>
                 </div>
 
                 <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-slate-700 uppercase tracking-wide">
+                    <Label htmlFor="department" className="text-sm font-semibold text-slate-700">
                     Department
-                    </label>
+                    </Label>
                     <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Building className="h-5 w-5 text-slate-400" />
-                    </div>
-                    <input
-                        {...register("department")}
-                        disabled={!isEditing}
-                        className={`w-full pl-12 pr-10 py-4 border rounded-xl transition-all duration-300 outline-none ${
-                        isEditing
-                            ? "bg-white border-slate-300 focus:ring-2 focus:ring-sky-400 focus:border-transparent text-slate-900"
-                            : "bg-slate-100 border-slate-200 text-slate-600 cursor-not-allowed"
-                        }`}
-                        placeholder="Enter your department"
+                    <Building className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                    <Input
+                        id="department"
+                        value={formData.department}
+                        onChange={(e) => handleInputChange("department", e.target.value)}
+                        className="pl-10 bg-white border-slate-300 focus:border-sky-400 focus:ring-sky-400"
+                        required
                     />
-                    {isFieldValid("department") && isEditing && (
-                        <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                        </div>
-                    )}
                     </div>
-                    {errors.department && (
-                    <p className="text-sm text-red-500 mt-2 flex items-center gap-2">
-                        <span className="w-1 h-1 bg-red-500 rounded-full"></span>
-                        {errors.department.message}
-                    </p>
-                    )}
                 </div>
                 </div>
-            </div>
 
-            {/* Submit Button */}
-            {isEditing && (
-                <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-slate-200">
+                {/* Submit Button */}
+                <div className="pt-6">
                 <Button
                     type="submit"
-                    disabled={updating}
-                    className="flex-1 bg-gradient-to-r from-yellow-500 to-yellow-400 text-slate-900 py-4 px-6 rounded-xl font-bold text-lg hover:from-yellow-400 hover:to-yellow-300 focus:ring-2 focus:ring-yellow-400 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl hover:shadow-2xl transform hover:-translate-y-0.5 group"
+                    disabled={saving}
+                    className="w-full bg-gradient-to-r from-yellow-500 to-yellow-400 text-slate-900 hover:from-yellow-400 hover:to-yellow-300 font-semibold py-3"
                 >
-                    {updating ? (
+                    {saving ? (
                     <div className="flex items-center justify-center">
-                        <div className="w-6 h-6 border-2 border-slate-900 border-t-transparent rounded-full animate-spin mr-3"></div>
-                        Updating Profile...
+                        <div className="w-4 h-4 border-2 border-slate-900 border-t-transparent rounded-full animate-spin mr-2"></div>
+                        Saving Changes...
                     </div>
                     ) : (
                     <div className="flex items-center justify-center gap-2">
-                        <Save className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                        <Save className="h-4 w-4" />
                         Save Changes
                     </div>
                     )}
                 </Button>
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                    setIsEditing(false)
-                    setError(null)
-                    // Reset form to original values
-                    reset({
-                        nom: user?.nom || user?.lastName || "",
-                        prénom: user?.prénom || user?.firstName || "",
-                        email: user?.email || "",
-                        téléphone: user?.téléphone || user?.phone || "",
-                        matricule: user?.matricule || user?.employeeId || "",
-                        department: user?.department || "",
-                    })
-                    }}
-                    className="px-8 py-4 border-2 border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 font-semibold text-lg rounded-xl"
-                >
-                    Cancel
-                </Button>
                 </div>
-            )}
             </form>
-        </CardContent>
+            </CardContent>
         </Card>
-
-        {/* Account Information */}
-        <Card className="border-0 shadow-xl overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-sky-500 to-sky-400 text-white p-6">
-            <CardTitle className="flex items-center gap-3 text-xl font-bold">
-            <Shield className="h-6 w-6" />
-            Account Information
-            </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6 sm:p-8 bg-gradient-to-br from-white to-sky-50">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-                <label className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Account Status</label>
-                <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="text-lg font-semibold text-green-700">Active</span>
-                </div>
-            </div>
-
-            <div className="space-y-3">
-                <label className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Member Since</label>
-                <p className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-sky-500" />
-                {user?.createdAt
-                    ? new Date(user.createdAt).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                    })
-                    : "Not available"}
-                </p>
-            </div>
-
-            <div className="space-y-3">
-                <label className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Account Type</label>
-                <Badge className="bg-gradient-to-r from-yellow-500 to-yellow-400 text-slate-900 px-4 py-2 text-sm font-semibold">
-                Naftal Employee
-                </Badge>
-            </div>
-
-            <div className="space-y-3">
-                <label className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Rewards Program</label>
-                <Badge className="bg-gradient-to-r from-sky-500 to-sky-400 text-white px-4 py-2 text-sm font-semibold">
-                Active Member
-                </Badge>
-            </div>
-            </div>
-        </CardContent>
-        </Card>
+        </div>
     </main>
     </div>
 )

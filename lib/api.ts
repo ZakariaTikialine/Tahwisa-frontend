@@ -1,16 +1,35 @@
-import axios from 'axios'
+import axios from "axios"
+import { tokenManager } from "./auth"
 
 const api = axios.create({
-    baseURL: 'https://tahwisa-backend-production.up.railway.app/api',
+baseURL: process.env.NEXT_PUBLIC_API_URL,
+timeout: 10000,
 })
 
-// Automatically attach token to every request
-api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('token')
+// Request interceptor to add auth token
+api.interceptors.request.use(
+(config) => {
+    const token = tokenManager.getToken()
     if (token) {
-        config.headers.Authorization = `Bearer ${token}`
+    config.headers.Authorization = `Bearer ${token}`
     }
     return config
-})
+},
+(error) => {
+    return Promise.reject(error)
+}
+)
+
+// Response interceptor for error handling
+api.interceptors.response.use(
+(response) => response,
+(error) => {
+    if (error.response?.status === 401) {
+    tokenManager.removeToken()
+    window.location.href = "/login"
+    }
+    return Promise.reject(error)
+}
+)
 
 export default api

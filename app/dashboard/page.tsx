@@ -7,57 +7,67 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { User, Settings, Bell, Calendar, Clock, Fuel, Plane, Trophy, Gift, MapPin, AlertCircle, Star, Award } from 'lucide-react'
 import { Navigation } from "@/components/navigation"
-import {
-User,
-Hash,
-LogOut,
-Settings,
-Bell,
-Calendar,
-Clock,
-Fuel,
-Plane,
-Trophy,
-Gift,
-MapPin,
-Menu,
-X,
-AlertCircle,
-Star,
-Award,
-} from "lucide-react"
+import type { Employee, Inscription, Session } from "@/lib/types"
 
 export default function DashboardPage() {
-const [user, setUser] = useState<any>(null)
+const [user, setUser] = useState<Employee | null>(null)
+const [userInscriptions, setUserInscriptions] = useState<Inscription[]>([])
+const [sessions, setSessions] = useState<Session[]>([])
 const [loading, setLoading] = useState(true)
-const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 const [error, setError] = useState<string | null>(null)
 const router = useRouter()
 
 useEffect(() => {
-    const fetchMe = async () => {
-        try {
-        const res = await api.get('/auth/me')
-        const u = res.data
-
-        setUser({
-            firstName: u.prénom,
-            lastName: u.nom,
-            email: u.email,
-            department: u.department,
-            employeeId: u.id,
-            role: u.role || 'Employee'
-        })
-        } catch (err) {
-        router.push('/login')
-        } finally {
-        setLoading(false)
+    const fetchData = async () => {
+    try {
+        // Check if token exists
+        if (!tokenManager.hasToken()) {
+        router.push("/login")
+        return
         }
+
+        // Fetch user info
+        const userResponse = await api.get("/auth/me")
+        const userData = userResponse.data
+        setUser(userData)
+
+        // Fetch user's inscriptions
+        try {
+        const inscriptionsResponse = await api.get(`/api/inscriptions/employee/${userData.id}`)
+        setUserInscriptions(inscriptionsResponse.data)
+        } catch (inscErr: any) {
+        if (inscErr.response?.status !== 404) {
+            console.error("Failed to fetch inscriptions:", inscErr)
+        }
+        setUserInscriptions([])
+        }
+
+        // Fetch all sessions
+        try {
+        const sessionsResponse = await api.get("/api/sessions")
+        setSessions(sessionsResponse.data)
+        } catch (sessErr: any) {
+        console.error("Failed to fetch sessions:", sessErr)
+        setSessions([])
+        }
+    } catch (err: any) {
+        console.error("Failed to fetch user data:", err)
+
+        // If unauthorized, clear token and redirect
+        if (err.response?.status === 401) {
+        tokenManager.removeToken()
+        router.push("/login")
+        } else {
+        setError("Failed to load user data. Please try refreshing the page.")
+        }
+    } finally {
+        setLoading(false)
+    }
     }
 
-fetchMe()
+    fetchData()
 }, [router])
 
 const handleLogout = () => {
@@ -113,37 +123,16 @@ if (error) {
 if (!user) return null
 
 const getInitials = () => {
-    return `${user.firstName?.[0] || ""}${user.lastName?.[0] || ""}`.toUpperCase()
+    return `${user.prénom?.[0] || ""}${user.nom?.[0] || ""}`.toUpperCase()
 }
 
-// Mock data for trip registrations and rewards
+// Calculate stats
 const userStats = {
-    tripsRegistered: 3,
-    tripsWon: 1,
-    pointsEarned: 250,
-    nextDrawDate: "Jan 15, 2025",
+    tripsRegistered: userInscriptions.filter((i) => i.statut === "active").length,
+    tripsCompleted: userInscriptions.filter((i) => i.statut === "completed").length,
+    totalRegistrations: userInscriptions.length,
+    availableSessions: sessions.length,
 }
-
-const registeredTrips = [
-    {
-    destination: "Thailand Beach Resort",
-    status: "Registered",
-    drawDate: "Jan 15, 2025",
-    spots: "5 Winners",
-    },
-    {
-    destination: "Morocco Imperial Cities",
-    status: "Registered",
-    drawDate: "Feb 10, 2025",
-    spots: "3 Winners",
-    },
-    {
-    destination: "Spain & Portugal",
-    status: "Pending",
-    drawDate: "Mar 5, 2025",
-    spots: "4 Winners",
-    },
-]
 
 return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-yellow-50 to-sky-50">
@@ -161,45 +150,45 @@ return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             <Card className="border-0 shadow-xl bg-gradient-to-br from-yellow-400 to-yellow-500 text-slate-900 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 sm:pb-4">
-                <CardTitle className="text-xs sm:text-sm font-medium text-slate-800">Trips Registered</CardTitle>
+                <CardTitle className="text-xs sm:text-sm font-medium text-slate-800">Active Registrations</CardTitle>
                 <Plane className="h-5 w-5 sm:h-6 sm:w-6 text-slate-700 flex-shrink-0" />
             </CardHeader>
             <CardContent className="space-y-1 sm:space-y-2">
                 <div className="text-2xl sm:text-3xl font-bold text-slate-900">{userStats.tripsRegistered}</div>
-                <p className="text-slate-700 text-xs sm:text-sm">Active registrations</p>
+                <p className="text-slate-700 text-xs sm:text-sm">Current registrations</p>
             </CardContent>
             </Card>
 
             <Card className="border-0 shadow-xl bg-gradient-to-br from-sky-400 to-sky-500 text-white hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 sm:pb-4">
-                <CardTitle className="text-xs sm:text-sm font-medium text-sky-100">Trips Won</CardTitle>
+                <CardTitle className="text-xs sm:text-sm font-medium text-sky-100">Completed Trips</CardTitle>
                 <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-sky-200 flex-shrink-0" />
             </CardHeader>
             <CardContent className="space-y-1 sm:space-y-2">
-                <div className="text-2xl sm:text-3xl font-bold">{userStats.tripsWon}</div>
-                <p className="text-sky-100 text-xs sm:text-sm">Amazing adventures</p>
+                <div className="text-2xl sm:text-3xl font-bold">{userStats.tripsCompleted}</div>
+                <p className="text-sky-100 text-xs sm:text-sm">Successful trips</p>
             </CardContent>
             </Card>
 
             <Card className="border-0 shadow-xl bg-gradient-to-br from-slate-700 to-slate-800 text-white hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 sm:pb-4">
-                <CardTitle className="text-xs sm:text-sm font-medium text-slate-300">Reward Points</CardTitle>
+                <CardTitle className="text-xs sm:text-sm font-medium text-slate-300">Total Registrations</CardTitle>
                 <Star className="h-5 w-5 sm:h-6 sm:w-6 text-slate-400 flex-shrink-0" />
             </CardHeader>
             <CardContent className="space-y-1 sm:space-y-2">
-                <div className="text-2xl sm:text-3xl font-bold">{userStats.pointsEarned}</div>
-                <p className="text-slate-300 text-xs sm:text-sm">Points earned</p>
+                <div className="text-2xl sm:text-3xl font-bold">{userStats.totalRegistrations}</div>
+                <p className="text-slate-300 text-xs sm:text-sm">All time</p>
             </CardContent>
             </Card>
 
             <Card className="border-0 shadow-xl bg-gradient-to-br from-green-500 to-green-600 text-white hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 sm:pb-4">
-                <CardTitle className="text-xs sm:text-sm font-medium text-green-100">Next Draw</CardTitle>
+                <CardTitle className="text-xs sm:text-sm font-medium text-green-100">Available Sessions</CardTitle>
                 <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-green-200 flex-shrink-0" />
             </CardHeader>
             <CardContent className="space-y-1 sm:space-y-2">
-                <div className="text-lg sm:text-xl font-bold">{userStats.nextDrawDate}</div>
-                <p className="text-green-100 text-xs sm:text-sm">Upcoming draw</p>
+                <div className="text-2xl sm:text-3xl font-bold">{userStats.availableSessions}</div>
+                <p className="text-green-100 text-xs sm:text-sm">Sessions to explore</p>
             </CardContent>
             </Card>
         </div>
@@ -211,49 +200,84 @@ return (
             <MapPin className="h-6 w-6 text-sky-500" />
             My Trip Registrations
         </h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-            {registeredTrips.map((trip, index) => (
-            <Card
-                key={index}
-                className="border-0 shadow-xl overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
-            >
-                <div className="h-32 bg-gradient-to-br from-sky-400 to-sky-500 relative">
-                <div className="absolute inset-0 bg-black/20"></div>
-                <div className="absolute top-4 right-4">
-                    <Badge
-                    className={`${trip.status === "Registered" ? "bg-green-500" : "bg-yellow-500"} text-white font-semibold`}
-                    >
-                    {trip.status}
-                    </Badge>
-                </div>
-                <div className="absolute bottom-4 left-4 text-white">
-                    <h3 className="text-lg font-bold">{trip.destination}</h3>
-                </div>
-                </div>
-                <CardContent className="p-4 sm:p-6">
-                <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                    <span className="text-slate-600 text-sm">Draw Date:</span>
-                    <span className="font-semibold text-slate-900">{trip.drawDate}</span>
+        {userInscriptions.length > 0 ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+            {userInscriptions.slice(0, 6).map((inscription) => {
+                const session = sessions.find((s) => s.id === inscription.session_id)
+                return (
+                <Card
+                    key={inscription.id}
+                    className="border-0 shadow-xl overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
+                >
+                    <div className="h-32 bg-gradient-to-br from-sky-400 to-sky-500 relative">
+                    <div className="absolute inset-0 bg-black/20"></div>
+                    <div className="absolute top-4 right-4">
+                        <Badge
+                        className={`${
+                            inscription.statut === "active"
+                            ? "bg-green-500"
+                            : inscription.statut === "completed"
+                            ? "bg-blue-500"
+                            : "bg-red-500"
+                        } text-white font-semibold`}
+                        >
+                        {inscription.statut}
+                        </Badge>
                     </div>
-                    <div className="flex justify-between items-center">
-                    <span className="text-slate-600 text-sm">Available Spots:</span>
-                    <span className="font-semibold text-yellow-600">{trip.spots}</span>
+                    <div className="absolute bottom-4 left-4 text-white">
+                        <h3 className="text-lg font-bold">
+                        {session?.nom || inscription.session_name || "Session"}
+                        </h3>
+                        {session?.destination_nom && (
+                        <p className="text-sky-100 text-sm">{session.destination_nom}</p>
+                        )}
                     </div>
-                    <div className="pt-2">
-                    <div className="w-full bg-slate-200 rounded-full h-2">
-                        <div
-                        className="bg-gradient-to-r from-yellow-500 to-yellow-400 h-2 rounded-full"
-                        style={{ width: "75%" }}
-                        ></div>
                     </div>
-                    <p className="text-xs text-slate-500 mt-1">Registration period: 75% complete</p>
+                    <CardContent className="p-4 sm:p-6">
+                    <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                        <span className="text-slate-600 text-sm">Registration Date:</span>
+                        <span className="font-semibold text-slate-900">
+                            {new Date(inscription.date_inscription).toLocaleDateString()}
+                        </span>
+                        </div>
+                        {session && (
+                        <>
+                            <div className="flex justify-between items-center">
+                            <span className="text-slate-600 text-sm">Start Date:</span>
+                            <span className="font-semibold text-slate-900">
+                                {new Date(session.date_debut).toLocaleDateString()}
+                            </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                            <span className="text-slate-600 text-sm">End Date:</span>
+                            <span className="font-semibold text-slate-900">
+                                {new Date(session.date_fin).toLocaleDateString()}
+                            </span>
+                            </div>
+                        </>
+                        )}
                     </div>
-                </div>
-                </CardContent>
+                    </CardContent>
+                </Card>
+                )
+            })}
+            </div>
+        ) : (
+            <Card className="border-0 shadow-xl">
+            <CardContent className="p-12 text-center">
+                <Plane className="h-16 w-16 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-slate-900 mb-2">No Registrations Yet</h3>
+                <p className="text-slate-600 mb-6">Start exploring available sessions and register for your next adventure!</p>
+                <Button
+                onClick={() => router.push("/registration")}
+                className="bg-gradient-to-r from-yellow-500 to-yellow-400 text-slate-900 hover:from-yellow-400 hover:to-yellow-300"
+                >
+                Browse Sessions
+                </Button>
+            </CardContent>
             </Card>
-            ))}
-        </div>
+        )}
         </section>
 
         {/* Employee Profile Card */}
@@ -276,7 +300,7 @@ return (
                     Full Name
                 </label>
                 <p className="text-lg sm:text-xl font-bold text-slate-900 bg-yellow-50 px-3 sm:px-4 py-2 sm:py-3 rounded-lg border-l-4 border-yellow-400 break-words">
-                    {user.firstName} {user.lastName}
+                    {user.prénom} {user.nom}
                 </p>
                 </div>
 
@@ -285,7 +309,7 @@ return (
                     Employee ID
                 </label>
                 <p className="text-base sm:text-lg font-mono font-bold text-sky-700 bg-sky-50 px-3 sm:px-4 py-2 sm:py-3 rounded-lg border-l-4 border-sky-400 break-all">
-                    {user.employeeId || "Not assigned"}
+                    {user.matricule}
                 </p>
                 </div>
 
@@ -303,34 +327,16 @@ return (
                     Department
                 </label>
                 <p className="text-base sm:text-lg font-semibold text-slate-900 bg-gradient-to-r from-yellow-50 to-sky-50 px-3 sm:px-4 py-2 sm:py-3 rounded-lg border-l-4 border-yellow-400 break-words">
-                    {user.department || "Not specified"}
+                    {user.department}
                 </p>
                 </div>
 
                 <div className="space-y-3">
                 <label className="text-xs sm:text-sm font-semibold text-slate-600 uppercase tracking-wide">
-                    Position
+                    Phone Number
                 </label>
                 <p className="text-base sm:text-lg font-semibold text-slate-900 bg-slate-50 px-3 sm:px-4 py-2 sm:py-3 rounded-lg border-l-4 border-slate-400 break-words">
-                    {user.position || "Not specified"}
-                </p>
-                </div>
-
-                <div className="space-y-3">
-                <label className="text-xs sm:text-sm font-semibold text-slate-600 uppercase tracking-wide">
-                    Member Since
-                </label>
-                <p className="text-sm sm:text-base text-slate-700 flex items-center gap-2 bg-green-50 px-3 sm:px-4 py-2 sm:py-3 rounded-lg border-l-4 border-green-400">
-                    <Calendar className="h-4 w-4 text-green-600 flex-shrink-0" />
-                    <span className="break-words">
-                    {user.createdAt
-                        ? new Date(user.createdAt).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                        })
-                        : "Not available"}
-                    </span>
+                    {user.téléphone}
                 </p>
                 </div>
             </div>
@@ -354,8 +360,8 @@ return (
                 onClick={() => router.push("/travel-periods")}
                 className="h-24 sm:h-28 flex-col gap-3 sm:gap-4 bg-gradient-to-br from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 text-sm sm:text-base"
                 >
-                <Plane className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0" />
-                <span className="font-semibold">Browse Trips</span>
+                <Calendar className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0" />
+                <span className="font-semibold">Travel Periods</span>
                 </Button>
                 <Button
                 onClick={() => router.push("/registration")}
@@ -371,23 +377,16 @@ return (
                 className="h-24 sm:h-28 flex-col gap-3 sm:gap-4 border-2 border-sky-300 text-sky-700 hover:bg-sky-50 hover:border-sky-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 bg-transparent text-sm sm:text-base"
                 >
                 <Trophy className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0" />
-                <span className="font-semibold">My Wins</span>
+                <span className="font-semibold">View Winners</span>
                 </Button>
 
                 <Button
+                onClick={() => router.push("/profile")}
                 variant="outline"
                 className="h-24 sm:h-28 flex-col gap-3 sm:gap-4 border-2 border-yellow-400 text-yellow-700 hover:bg-yellow-50 hover:border-yellow-500 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 bg-transparent text-sm sm:text-base"
                 >
                 <Settings className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0" />
-                <span className="font-semibold">Settings</span>
-                </Button>
-
-                <Button
-                variant="outline"
-                className="h-24 sm:h-28 flex-col gap-3 sm:gap-4 border-2 border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 bg-transparent text-sm sm:text-base"
-                >
-                <Bell className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0" />
-                <span className="font-semibold">Notifications</span>
+                <span className="font-semibold">Profile Settings</span>
                 </Button>
             </div>
             </CardContent>
@@ -409,57 +408,42 @@ return (
             </CardHeader>
             <CardContent className="p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-white to-sky-50">
             <div className="space-y-4 sm:space-y-6">
-                <div className="flex items-start sm:items-center space-x-4 sm:space-x-6 p-4 sm:p-6 bg-gradient-to-r from-yellow-100 to-yellow-50 rounded-xl border-l-4 border-yellow-500 shadow-md hover:shadow-lg transition-shadow">
-                <div className="w-4 h-4 bg-yellow-500 rounded-full animate-pulse shadow-lg flex-shrink-0 mt-1 sm:mt-0"></div>
-                <div className="flex-1 min-w-0">
-                    <p className="text-base sm:text-lg font-bold text-slate-900">Registered for Thailand Trip</p>
-                    <p className="text-xs sm:text-sm text-slate-600 flex items-center gap-2 mt-1">
-                    <Clock className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />2 hours ago
-                    </p>
-                </div>
-                <Badge className="bg-yellow-500 text-slate-900 px-2 sm:px-3 py-1 text-xs flex-shrink-0">New</Badge>
-                </div>
-
-                <div className="flex items-start sm:items-center space-x-4 sm:space-x-6 p-4 sm:p-6 bg-gradient-to-r from-green-100 to-green-50 rounded-xl border-l-4 border-green-500 shadow-md hover:shadow-lg transition-shadow">
-                <div className="w-4 h-4 bg-green-500 rounded-full shadow-lg flex-shrink-0 mt-1 sm:mt-0"></div>
-                <div className="flex-1 min-w-0">
-                    <p className="text-base sm:text-lg font-bold text-slate-900">Profile Updated</p>
-                    <p className="text-xs sm:text-sm text-slate-600 flex items-center gap-2 mt-1">
-                    <Clock className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />1 day ago
-                    </p>
-                </div>
-                <Badge
-                    variant="outline"
-                    className="border-green-400 text-green-700 px-2 sm:px-3 py-1 text-xs flex-shrink-0"
+                {userInscriptions.slice(0, 3).map((inscription, index) => (
+                <div
+                    key={inscription.id}
+                    className="flex items-start sm:items-center space-x-4 sm:space-x-6 p-4 sm:p-6 bg-gradient-to-r from-yellow-100 to-yellow-50 rounded-xl border-l-4 border-yellow-500 shadow-md hover:shadow-lg transition-shadow"
                 >
-                    Completed
-                </Badge>
-                </div>
-
-                <div className="flex items-start sm:items-center space-x-4 sm:space-x-6 p-4 sm:p-6 bg-gradient-to-r from-sky-100 to-sky-50 rounded-xl border-l-4 border-sky-500 shadow-md hover:shadow-lg transition-shadow">
-                <div className="w-4 h-4 bg-sky-500 rounded-full shadow-lg flex-shrink-0 mt-1 sm:mt-0"></div>
-                <div className="flex-1 min-w-0">
-                    <p className="text-base sm:text-lg font-bold text-slate-900">Joined Naftal Rewards</p>
-                    <p className="text-xs sm:text-sm text-slate-600 flex items-center gap-2 mt-1">
-                    <Clock className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                    <span className="break-words">
-                        {user.createdAt
-                        ? new Date(user.createdAt).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                            })
-                        : "Unknown date"}
-                    </span>
+                    <div className="w-4 h-4 bg-yellow-500 rounded-full animate-pulse shadow-lg flex-shrink-0 mt-1 sm:mt-0"></div>
+                    <div className="flex-1 min-w-0">
+                    <p className="text-base sm:text-lg font-bold text-slate-900">
+                        Registered for {inscription.session_name || "Session"}
                     </p>
+                    <p className="text-xs sm:text-sm text-slate-600 flex items-center gap-2 mt-1">
+                        <Clock className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                        {new Date(inscription.date_inscription).toLocaleDateString()}
+                    </p>
+                    </div>
+                    <Badge
+                    className={`${
+                        inscription.statut === "active"
+                        ? "bg-green-500"
+                        : inscription.statut === "completed"
+                        ? "bg-blue-500"
+                        : "bg-red-500"
+                    } text-white px-2 sm:px-3 py-1 text-xs flex-shrink-0`}
+                    >
+                    {inscription.statut}
+                    </Badge>
                 </div>
-                <Badge
-                    variant="outline"
-                    className="border-sky-400 text-sky-700 px-2 sm:px-3 py-1 text-xs flex-shrink-0"
-                >
-                    Welcome
-                </Badge>
+                ))}
+
+                {userInscriptions.length === 0 && (
+                <div className="text-center py-8 text-slate-500">
+                    <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No recent activity</p>
+                    <p className="text-sm mt-2">Register for a session to see your activity here</p>
                 </div>
+                )}
             </div>
             </CardContent>
         </Card>
@@ -468,4 +452,3 @@ return (
     </div>
 )
 }
-

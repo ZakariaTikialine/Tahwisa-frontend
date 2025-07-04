@@ -1,129 +1,109 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { tokenManager } from "@/lib/auth"
-import api from "@/lib/api"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import {
-Calendar,
-Users,
-Clock,
-MapPin,
-ArrowLeft,
-Plane,
-AlertCircle,
-CalendarDays,
-TrendingUp,
-Globe,
-Award,
-Eye,
-Filter,
-Search,
-} from "lucide-react"
-
-interface TravelPeriod {
-id: string
-destination: string
-startDate: string
-endDate: string
-maxParticipants: number
-registeredCount: number
-status: "open" | "closed" | "full" | "upcoming"
-description?: string
-type?: string
-createdAt: string
-updatedAt: string
-}
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Trash2, Edit, Plus, Calendar, Clock, Users } from "lucide-react"
+import { toast } from "sonner"
+import api from "@/lib/api"
+import type { Periode } from "@/lib/types"
 
 export default function TravelPeriodsPage() {
-const [periods, setPeriods] = useState<TravelPeriod[]>([])
+const [periodes, setPeriodes] = useState<Periode[]>([])
 const [loading, setLoading] = useState(true)
-const [error, setError] = useState<string | null>(null)
-const [searchTerm, setSearchTerm] = useState("")
-const [statusFilter, setStatusFilter] = useState<string>("all")
-const router = useRouter()
-
-useEffect(() => {
-    const fetchTravelPeriods = async () => {
-    try {
-        // Check if token exists
-        if (!tokenManager.hasToken()) {
-        router.push("/login")
-        return
-        }
-
-        const response = await api.get("/api/periodes")
-        setPeriods(response.data)
-    } catch (err: any) {
-        console.error("Failed to fetch travel periods:", err)
-
-        // If unauthorized, clear token and redirect
-        if (err.response?.status === 401) {
-        tokenManager.removeToken()
-        router.push("/login")
-        } else {
-        setError("Failed to load travel periods. Please try refreshing the page.")
-        }
-    } finally {
-        setLoading(false)
-    }
-    }
-
-    fetchTravelPeriods()
-}, [router])
-
-// Filter periods based on search and status
-const filteredPeriods = periods.filter((period) => {
-    const matchesSearch =
-    period.destination.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    period.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    period.type?.toLowerCase().includes(searchTerm.toLowerCase())
-
-    const matchesStatus = statusFilter === "all" || period.status === statusFilter
-
-    return matchesSearch && matchesStatus
+const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+const [editingPeriode, setEditingPeriode] = useState<Periode | null>(null)
+const [formData, setFormData] = useState({
+    nom: "",
+    date_debut_periode: "",
+    date_fin_periode: "",
+    date_limite_inscription: "",
+    statut: "open" as "open" | "closed",
 })
 
-// Calculate statistics
-const stats = {
-    totalPeriods: periods.length,
-    openPeriods: periods.filter((p) => p.status === "open").length,
-    totalRegistrations: periods.reduce((sum, p) => sum + p.registeredCount, 0),
-    averageRegistrations:
-    periods.length > 0 ? Math.round(periods.reduce((sum, p) => sum + p.registeredCount, 0) / periods.length) : 0,
-}
-
-const getStatusColor = (status: string) => {
-    switch (status) {
-    case "open":
-        return "bg-green-500"
-    case "closed":
-        return "bg-red-500"
-    case "full":
-        return "bg-yellow-500"
-    case "upcoming":
-        return "bg-blue-500"
-    default:
-        return "bg-gray-500"
+// Fetch all periods
+const fetchPeriodes = async () => {
+    try {
+    const response = await api.get("/api/periodes")
+    setPeriodes(response.data)
+    } catch (error) {
+    toast.error("Failed to fetch travel periods")
+    } finally {
+    setLoading(false)
     }
 }
 
-const getStatusText = (status: string) => {
-    switch (status) {
-    case "open":
-        return "Open for Registration"
-    case "closed":
-        return "Registration Closed"
-    case "full":
-        return "Fully Booked"
-    case "upcoming":
-        return "Coming Soon"
-    default:
-        return "Unknown Status"
+// Create new period
+const createPeriode = async () => {
+    try {
+    const response = await api.post("/api/periodes", formData)
+    toast.success("Period created successfully!")
+    fetchPeriodes()
+    setIsCreateDialogOpen(false)
+    resetForm()
+    } catch (error: any) {
+    const errorMessage = error.response?.data?.message || "Failed to create period"
+    toast.error(errorMessage)
     }
+}
+
+// Update period
+const updatePeriode = async () => {
+    if (!editingPeriode) return
+
+    try {
+    const response = await api.put(`/api/periodes/${editingPeriode.id}`, formData)
+    toast.success("Period updated successfully!")
+    fetchPeriodes()
+    setIsEditDialogOpen(false)
+    setEditingPeriode(null)
+    resetForm()
+    } catch (error: any) {
+    const errorMessage = error.response?.data?.message || "Failed to update period"
+    toast.error(errorMessage)
+    }
+}
+
+// Delete period
+const deletePeriode = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this travel period?")) return
+
+    try {
+    await api.delete(`/api/periodes/${id}`)
+    toast.success("Period deleted successfully!")
+    fetchPeriodes()
+    } catch (error: any) {
+    const errorMessage = error.response?.data?.message || "Failed to delete period"
+    toast.error(errorMessage)
+    }
+}
+
+const resetForm = () => {
+    setFormData({
+    nom: "",
+    date_debut_periode: "",
+    date_fin_periode: "",
+    date_limite_inscription: "",
+    statut: "open",
+    })
+}
+
+const handleEdit = (periode: Periode) => {
+    setEditingPeriode(periode)
+    setFormData({
+    nom: periode.nom,
+    date_debut_periode: periode.date_debut_periode.split("T")[0],
+    date_fin_periode: periode.date_fin_periode.split("T")[0],
+    date_limite_inscription: periode.date_limite_inscription.split("T")[0],
+    statut: periode.statut,
+    })
+    setIsEditDialogOpen(true)
 }
 
 const formatDate = (dateString: string) => {
@@ -134,51 +114,23 @@ const formatDate = (dateString: string) => {
     })
 }
 
-const calculateDuration = (startDate: string, endDate: string) => {
-    const start = new Date(startDate)
-    const end = new Date(endDate)
-    const diffTime = Math.abs(end.getTime() - start.getTime())
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-    return diffDays
+const isRegistrationOpen = (periode: Periode) => {
+    const today = new Date()
+    const deadline = new Date(periode.date_limite_inscription)
+    return periode.statut === "open" && today <= deadline
 }
 
-const getRegistrationPercentage = (registered: number, max: number) => {
-    return max > 0 ? Math.round((registered / max) * 100) : 0
-}
+useEffect(() => {
+    fetchPeriodes()
+}, [])
 
 if (loading) {
     return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-yellow-50 via-blue-50 to-slate-100 px-4">
-        <div className="text-center space-y-4">
-        <div className="flex items-center justify-center gap-3 mb-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex items-center justify-center shadow-xl animate-pulse">
-            <Calendar className="h-8 w-8 text-slate-900" />
-            </div>
-        </div>
-        <div className="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-b-4 border-yellow-500 mx-auto"></div>
-        <div className="space-y-2">
-            <p className="text-slate-700 font-medium text-sm sm:text-base">Loading travel periods...</p>
-            <p className="text-slate-500 text-xs sm:text-sm">Please wait a moment</p>
-        </div>
-        </div>
-    </div>
-    )
-}
-
-if (error) {
-    return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-yellow-50 via-blue-50 to-slate-100 px-4">
-        <div className="text-center space-y-4 max-w-md">
-        <AlertCircle className="h-16 w-16 text-red-500 mx-auto" />
-        <h1 className="text-2xl font-bold text-slate-900">Something went wrong</h1>
-        <p className="text-slate-600">{error}</p>
-        <div className="space-x-4">
-            <Button onClick={() => window.location.reload()} className="bg-yellow-500 hover:bg-yellow-600">
-            Try Again
-            </Button>
-            <Button variant="outline" onClick={() => router.push("/dashboard")}>
-            Back to Dashboard
-            </Button>
+    <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-blue-50 p-6">
+        <div className="max-w-7xl mx-auto">
+        <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading travel periods...</p>
         </div>
         </div>
     </div>
@@ -186,311 +138,264 @@ if (error) {
 }
 
 return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-yellow-50 to-sky-50">
-    {/* Header */}
-    <header className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white shadow-2xl relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 to-sky-500/10"></div>
+    <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-blue-50 p-6">
+    <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-8">
+        <div>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">Travel Periods</h1>
+            <p className="text-gray-600">Manage travel periods and registration deadlines</p>
+        </div>
 
-        <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <div className="flex items-center gap-4 sm:gap-6">
-            <Button
-            variant="ghost"
-            onClick={() => router.push("/dashboard")}
-            className="text-white hover:bg-white/10 p-2"
-            >
-            <ArrowLeft className="h-5 w-5 sm:h-6 sm:w-6" />
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+            <Button className="bg-yellow-600 hover:bg-yellow-700 text-white">
+                <Plus className="w-4 h-4 mr-2" />
+                Add New Period
             </Button>
-
-            <div className="flex items-center gap-3 sm:gap-4">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex items-center justify-center shadow-xl">
-                <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-slate-900" />
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+            <DialogHeader>
+                <DialogTitle>Create New Travel Period</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+                <div>
+                <Label htmlFor="nom">Period Name</Label>
+                <Input
+                    id="nom"
+                    value={formData.nom}
+                    onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
+                    placeholder="e.g., Summer 2024"
+                />
+                </div>
+                <div>
+                <Label htmlFor="date_debut">Start Date</Label>
+                <Input
+                    id="date_debut"
+                    type="date"
+                    value={formData.date_debut_periode}
+                    onChange={(e) => setFormData({ ...formData, date_debut_periode: e.target.value })}
+                />
+                </div>
+                <div>
+                <Label htmlFor="date_fin">End Date</Label>
+                <Input
+                    id="date_fin"
+                    type="date"
+                    value={formData.date_fin_periode}
+                    onChange={(e) => setFormData({ ...formData, date_fin_periode: e.target.value })}
+                />
+                </div>
+                <div>
+                <Label htmlFor="date_limite">Registration Deadline</Label>
+                <Input
+                    id="date_limite"
+                    type="date"
+                    value={formData.date_limite_inscription}
+                    onChange={(e) => setFormData({ ...formData, date_limite_inscription: e.target.value })}
+                />
+                </div>
+                <div>
+                <Label htmlFor="statut">Status</Label>
+                <Select
+                    value={formData.statut}
+                    onValueChange={(value: "open" | "closed") => setFormData({ ...formData, statut: value })}
+                >
+                    <SelectTrigger>
+                    <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                    <SelectItem value="open">Open</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
+                    </SelectContent>
+                </Select>
+                </div>
+                <Button onClick={createPeriode} className="w-full bg-yellow-600 hover:bg-yellow-700">
+                Create Period
+                </Button>
             </div>
-            <div>
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-300 bg-clip-text text-transparent">
-                Travel Periods
-                </h1>
-                <p className="text-slate-400 text-sm sm:text-base">
-                View all available travel destinations and periods
+            </DialogContent>
+        </Dialog>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <Card className="border-l-4 border-l-yellow-500">
+            <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+                <div>
+                <p className="text-sm font-medium text-gray-600">Total Periods</p>
+                <p className="text-3xl font-bold text-gray-900">{periodes.length}</p>
+                </div>
+                <Calendar className="w-8 h-8 text-yellow-600" />
+            </div>
+            </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-blue-500">
+            <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+                <div>
+                <p className="text-sm font-medium text-gray-600">Open Periods</p>
+                <p className="text-3xl font-bold text-gray-900">
+                    {periodes.filter((p) => p.statut === "open").length}
                 </p>
+                </div>
+                <Users className="w-8 h-8 text-blue-600" />
             </div>
-            </div>
-
-            <div className="ml-auto">
-            <Badge className="bg-gradient-to-r from-sky-500 to-sky-400 text-white border-0 px-3 py-1">
-                {periods.length} Periods Available
-            </Badge>
-            <Button
-                onClick={() => router.push("/registration")}
-                className="bg-gradient-to-r from-yellow-500 to-yellow-400 text-slate-900 hover:from-yellow-400 hover:to-yellow-300 font-semibold px-4 py-2"
-            >
-                <Plane className="h-4 w-4 mr-2" />
-                Register for Trip
-            </Button>
-            </div>
-        </div>
-        </div>
-    </header>
-
-    {/* Main Content */}
-    <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12 space-y-8">
-        {/* Statistics Cards */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <Card className="border-0 shadow-xl bg-gradient-to-br from-yellow-400 to-yellow-500 text-slate-900 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium text-slate-800">Total Periods</CardTitle>
-            <Globe className="h-5 w-5 text-slate-700" />
-            </CardHeader>
-            <CardContent>
-            <div className="text-3xl font-bold text-slate-900">{stats.totalPeriods}</div>
-            <p className="text-slate-700 text-sm">Available destinations</p>
             </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-xl bg-gradient-to-br from-green-500 to-green-600 text-white hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium text-green-100">Open for Registration</CardTitle>
-            <CalendarDays className="h-5 w-5 text-green-200" />
-            </CardHeader>
-            <CardContent>
-            <div className="text-3xl font-bold">{stats.openPeriods}</div>
-            <p className="text-green-100 text-sm">Currently accepting registrations</p>
-            </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-xl bg-gradient-to-br from-sky-500 to-sky-600 text-white hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium text-sky-100">Total Registrations</CardTitle>
-            <Users className="h-5 w-5 text-sky-200" />
-            </CardHeader>
-            <CardContent>
-            <div className="text-3xl font-bold">{stats.totalRegistrations}</div>
-            <p className="text-sky-100 text-sm">Employees registered</p>
-            </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-xl bg-gradient-to-br from-slate-700 to-slate-800 text-white hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium text-slate-300">Average Registrations</CardTitle>
-            <TrendingUp className="h-5 w-5 text-slate-400" />
-            </CardHeader>
-            <CardContent>
-            <div className="text-3xl font-bold">{stats.averageRegistrations}</div>
-            <p className="text-slate-300 text-sm">Per destination</p>
-            </CardContent>
-        </Card>
-        </section>
-
-        {/* Search and Filter */}
-        <section className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1 relative">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-slate-400" />
-            </div>
-            <input
-                type="text"
-                placeholder="Search destinations, descriptions, or types..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 placeholder-slate-500 focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all duration-300 outline-none shadow-sm"
-            />
-            </div>
-
-            {/* Status Filter */}
-            <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <Filter className="h-5 w-5 text-slate-400" />
-            </div>
-            <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="pl-12 pr-8 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all duration-300 outline-none shadow-sm appearance-none cursor-pointer"
-            >
-                <option value="all">All Statuses</option>
-                <option value="open">Open</option>
-                <option value="closed">Closed</option>
-                <option value="full">Full</option>
-                <option value="upcoming">Upcoming</option>
-            </select>
-            </div>
-        </div>
-
-        {/* Results count */}
-        <div className="text-slate-600 text-sm">
-            Showing {filteredPeriods.length} of {periods.length} travel periods
-        </div>
-        </section>
-
-        {/* Travel Periods Grid */}
-        <section className="space-y-6">
-        {filteredPeriods.length === 0 ? (
-            <Card className="border-0 shadow-xl">
-            <CardContent className="p-12 text-center">
-                <Plane className="h-16 w-16 text-slate-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-slate-900 mb-2">No travel periods found</h3>
-                <p className="text-slate-600">
-                {searchTerm || statusFilter !== "all"
-                    ? "Try adjusting your search or filter criteria."
-                    : "There are currently no travel periods available."}
+        <Card className="border-l-4 border-l-green-500">
+            <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+                <div>
+                <p className="text-sm font-medium text-gray-600">Active Registration</p>
+                <p className="text-3xl font-bold text-gray-900">
+                    {periodes.filter((p) => isRegistrationOpen(p)).length}
                 </p>
+                </div>
+                <Clock className="w-8 h-8 text-green-600" />
+            </div>
+            </CardContent>
+        </Card>
+        </div>
+
+        {/* Periods Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {periodes.map((periode) => (
+            <Card key={periode.id} className="hover:shadow-lg transition-shadow">
+            <CardHeader className="pb-3">
+                <div className="flex justify-between items-start">
+                <CardTitle className="text-xl font-bold text-gray-900">{periode.nom}</CardTitle>
+                <div className="flex gap-2">
+                    <Badge
+                    variant={periode.statut === "open" ? "default" : "secondary"}
+                    className={
+                        periode.statut === "open" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+                    }
+                    >
+                    {periode.statut}
+                    </Badge>
+                    {isRegistrationOpen(periode) && (
+                    <Badge className="bg-yellow-100 text-yellow-800">Registration Open</Badge>
+                    )}
+                </div>
+                </div>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+                <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                    <span className="text-gray-600">Start Date:</span>
+                    <span className="font-medium">{formatDate(periode.date_debut_periode)}</span>
+                </div>
+                <div className="flex justify-between">
+                    <span className="text-gray-600">End Date:</span>
+                    <span className="font-medium">{formatDate(periode.date_fin_periode)}</span>
+                </div>
+                <div className="flex justify-between">
+                    <span className="text-gray-600">Registration Deadline:</span>
+                    <span className="font-medium">{formatDate(periode.date_limite_inscription)}</span>
+                </div>
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                <Button variant="outline" size="sm" onClick={() => handleEdit(periode)} className="flex-1">
+                    <Edit className="w-4 h-4 mr-1" />
+                    Edit
+                </Button>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => deletePeriode(periode.id)}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                    <Trash2 className="w-4 h-4" />
+                </Button>
+                </div>
             </CardContent>
             </Card>
-        ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8">
-            {filteredPeriods.map((period) => {
-                const registrationPercentage = getRegistrationPercentage(period.registeredCount, period.maxParticipants)
-                const duration = calculateDuration(period.startDate, period.endDate)
+        ))}
+        </div>
 
-                return (
-                <Card
-                    key={period.id}
-                    className="border-0 shadow-xl overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 bg-white"
-                >
-                    {/* Card Header with Destination Image Placeholder */}
-                    <div className="h-48 bg-gradient-to-br from-sky-400 to-sky-500 relative">
-                    <div className="absolute inset-0 bg-black/20"></div>
-
-                    {/* Status Badge */}
-                    <div className="absolute top-4 right-4">
-                        <Badge className={`${getStatusColor(period.status)} text-white font-semibold px-3 py-1`}>
-                        {getStatusText(period.status)}
-                        </Badge>
-                    </div>
-
-                    {/* Type Badge */}
-                    {period.type && (
-                        <div className="absolute top-4 left-4">
-                        <Badge className="bg-yellow-500 text-slate-900 font-semibold px-3 py-1">{period.type}</Badge>
-                        </div>
-                    )}
-
-                    {/* Destination Info */}
-                    <div className="absolute bottom-4 left-4 text-white">
-                        <h3 className="text-xl font-bold mb-1 flex items-center gap-2">
-                        <MapPin className="h-5 w-5" />
-                        {period.destination}
-                        </h3>
-                        <p className="text-sky-100 flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
-                        {duration} {duration === 1 ? "day" : "days"}
-                        </p>
-                    </div>
-                    </div>
-
-                    {/* Card Content */}
-                    <CardContent className="p-6 space-y-4">
-                    {/* Description */}
-                    {period.description && (
-                        <p className="text-slate-600 text-sm leading-relaxed">{period.description}</p>
-                    )}
-
-                    {/* Travel Dates */}
-                    <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                        <span className="text-slate-600 text-sm font-medium">Start Date:</span>
-                        <span className="font-semibold text-slate-900">{formatDate(period.startDate)}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                        <span className="text-slate-600 text-sm font-medium">End Date:</span>
-                        <span className="font-semibold text-slate-900">{formatDate(period.endDate)}</span>
-                        </div>
-                    </div>
-
-                    {/* Registration Statistics */}
-                    <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                        <span className="text-slate-600 text-sm font-medium">Registered:</span>
-                        <span className="font-semibold text-sky-600">
-                            {period.registeredCount} / {period.maxParticipants}
-                        </span>
-                        </div>
-
-                        {/* Registration Progress Bar */}
-                        <div className="space-y-2">
-                        <div className="w-full bg-slate-200 rounded-full h-3">
-                            <div
-                            className={`h-3 rounded-full transition-all duration-500 ${
-                                registrationPercentage >= 100
-                                ? "bg-gradient-to-r from-red-500 to-red-600"
-                                : registrationPercentage >= 80
-                                    ? "bg-gradient-to-r from-yellow-500 to-yellow-600"
-                                    : "bg-gradient-to-r from-green-500 to-green-600"
-                            }`}
-                            style={{ width: `${Math.min(registrationPercentage, 100)}%` }}
-                            ></div>
-                        </div>
-                        <div className="flex justify-between items-center text-xs text-slate-500">
-                            <span>{registrationPercentage}% filled</span>
-                            <span>{period.maxParticipants - period.registeredCount} spots remaining</span>
-                        </div>
-                        </div>
-                    </div>
-
-                    {/* Additional Info */}
-                    <div className="pt-4 border-t border-slate-200">
-                        <div className="flex items-center justify-between text-xs text-slate-500">
-                        <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            Created: {formatDate(period.createdAt)}
-                        </span>
-                        <span className="flex items-center gap-1">
-                            <Eye className="h-3 w-3" />
-                            ID: {period.id.slice(0, 8)}...
-                        </span>
-                        </div>
-                    </div>
-                    </CardContent>
-                </Card>
-                )
-            })}
-            </div>
+        {periodes.length === 0 && (
+        <div className="text-center py-12">
+            <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Travel Periods</h3>
+            <p className="text-gray-600 mb-6">Get started by creating your first travel period.</p>
+            <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-yellow-600 hover:bg-yellow-700">
+            <Plus className="w-4 h-4 mr-2" />
+            Add New Period
+            </Button>
+        </div>
         )}
-        </section>
 
-        {/* Summary Information */}
-        <section className="space-y-6">
-        <Card className="border-0 shadow-xl overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-slate-800 to-slate-700 text-white p-6">
-            <CardTitle className="flex items-center gap-3 text-xl font-bold">
-                <Award className="h-6 w-6 text-yellow-400" />
-                Travel Periods Summary
-            </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6 bg-gradient-to-br from-white to-slate-50">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="text-center space-y-2">
-                <div className="text-2xl font-bold text-green-600">
-                    {periods.filter((p) => p.status === "open").length}
-                </div>
-                <p className="text-sm text-slate-600">Open Periods</p>
-                </div>
-
-                <div className="text-center space-y-2">
-                <div className="text-2xl font-bold text-yellow-600">
-                    {periods.filter((p) => p.status === "full").length}
-                </div>
-                <p className="text-sm text-slate-600">Fully Booked</p>
-                </div>
-
-                <div className="text-center space-y-2">
-                <div className="text-2xl font-bold text-red-600">
-                    {periods.filter((p) => p.status === "closed").length}
-                </div>
-                <p className="text-sm text-slate-600">Closed Periods</p>
-                </div>
-
-                <div className="text-center space-y-2">
-                <div className="text-2xl font-bold text-blue-600">
-                    {periods.filter((p) => p.status === "upcoming").length}
-                </div>
-                <p className="text-sm text-slate-600">Upcoming Periods</p>
-                </div>
+        {/* Edit Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-md">
+            <DialogHeader>
+            <DialogTitle>Edit Travel Period</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+            <div>
+                <Label htmlFor="edit_nom">Period Name</Label>
+                <Input
+                id="edit_nom"
+                value={formData.nom}
+                onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
+                placeholder="e.g., Summer 2024"
+                />
             </div>
-            </CardContent>
-        </Card>
-        </section>
-    </main>
+            <div>
+                <Label htmlFor="edit_date_debut">Start Date</Label>
+                <Input
+                id="edit_date_debut"
+                type="date"
+                value={formData.date_debut_periode}
+                onChange={(e) => setFormData({ ...formData, date_debut_periode: e.target.value })}
+                />
+            </div>
+            <div>
+                <Label htmlFor="edit_date_fin">End Date</Label>
+                <Input
+                id="edit_date_fin"
+                type="date"
+                value={formData.date_fin_periode}
+                onChange={(e) => setFormData({ ...formData, date_fin_periode: e.target.value })}
+                />
+            </div>
+            <div>
+                <Label htmlFor="edit_date_limite">Registration Deadline</Label>
+                <Input
+                id="edit_date_limite"
+                type="date"
+                value={formData.date_limite_inscription}
+                onChange={(e) => setFormData({ ...formData, date_limite_inscription: e.target.value })}
+                />
+            </div>
+            <div>
+                <Label htmlFor="edit_statut">Status</Label>
+                <Select
+                value={formData.statut}
+                onValueChange={(value: "open" | "closed") => setFormData({ ...formData, statut: value })}
+                >
+                <SelectTrigger>
+                    <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="open">Open</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
+                </SelectContent>
+                </Select>
+            </div>
+            <Button onClick={updatePeriode} className="w-full bg-yellow-600 hover:bg-yellow-700">
+                Update Period
+            </Button>
+            </div>
+        </DialogContent>
+        </Dialog>
+    </div>
     </div>
 )
 }
