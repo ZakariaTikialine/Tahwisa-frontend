@@ -30,7 +30,7 @@ const [formData, setFormData] = useState({
 // Fetch all periods
 const fetchPeriodes = async () => {
     try {
-    const response = await api.get("/api/periodes")
+    const response = await api.get("/periodes")
     setPeriodes(response.data)
     } catch (error) {
     toast.error("Failed to fetch travel periods")
@@ -42,7 +42,7 @@ const fetchPeriodes = async () => {
 // Create new period
 const createPeriode = async () => {
     try {
-    const response = await api.post("/api/periodes", formData)
+    const response = await api.post("/periodes", formData)
     toast.success("Period created successfully!")
     fetchPeriodes()
     setIsCreateDialogOpen(false)
@@ -58,7 +58,7 @@ const updatePeriode = async () => {
     if (!editingPeriode) return
 
     try {
-    const response = await api.put(`/api/periodes/${editingPeriode.id}`, formData)
+    const response = await api.put(`/periodes/${editingPeriode.id}`, formData)
     toast.success("Period updated successfully!")
     fetchPeriodes()
     setIsEditDialogOpen(false)
@@ -75,7 +75,7 @@ const deletePeriode = async (id: number) => {
     if (!confirm("Are you sure you want to delete this travel period?")) return
 
     try {
-    await api.delete(`/api/periodes/${id}`)
+    await api.delete(`/periodes/${id}`)
     toast.success("Period deleted successfully!")
     fetchPeriodes()
     } catch (error: any) {

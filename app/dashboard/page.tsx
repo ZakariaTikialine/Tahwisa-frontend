@@ -35,7 +35,7 @@ useEffect(() => {
 
         // Fetch user's inscriptions
         try {
-        const inscriptionsResponse = await api.get(`/api/inscriptions/employee/${userData.id}`)
+        const inscriptionsResponse = await api.get(`/inscriptions/employee/${userData.id}`)
         setUserInscriptions(inscriptionsResponse.data)
         } catch (inscErr: any) {
         if (inscErr.response?.status !== 404) {
@@ -46,7 +46,7 @@ useEffect(() => {
 
         // Fetch all sessions
         try {
-        const sessionsResponse = await api.get("/api/sessions")
+        const sessionsResponse = await api.get("/sessions")
         setSessions(sessionsResponse.data)
         } catch (sessErr: any) {
         console.error("Failed to fetch sessions:", sessErr)

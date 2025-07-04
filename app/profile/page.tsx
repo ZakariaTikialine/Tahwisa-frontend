@@ -81,7 +81,7 @@ const handleSubmit = async (e: React.FormEvent) => {
         delete updateData.password
     }
 
-    await api.put(`/api/employees/${user.id}`, updateData)
+    await api.put(`/employees/${user.id}`, updateData)
     setSuccess("Profile updated successfully!")
 
     // Clear password field after successful update

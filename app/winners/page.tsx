@@ -19,7 +19,7 @@ const [generating, setGenerating] = useState(false)
 // Fetch all sessions
 const fetchSessions = async () => {
     try {
-    const response = await api.get("/api/sessions")
+    const response = await api.get("/sessions")
     setSessions(response.data)
     if (response.data.length > 0 && !selectedSession) {
         setSelectedSession(response.data[0].id)
@@ -33,7 +33,7 @@ const fetchSessions = async () => {
 // Fetch selection results for a session
 const fetchSelectionResults = async (sessionId: number) => {
     try {
-    const response = await api.get(`/api/resultat-selections/session/${sessionId}`)
+    const response = await api.get(`/resultat-selections/session/${sessionId}`)
     setSelections(response.data)
     } catch (error: any) {
     if (error.response?.status === 404) {
@@ -49,7 +49,7 @@ const fetchSelectionResults = async (sessionId: number) => {
 const generateSelection = async (sessionId: number) => {
     setGenerating(true)
     try {
-    const response = await api.post(`/api/resultat-selections/generate/${sessionId}`)
+    const response = await api.post(`/resultat-selections/generate/${sessionId}`)
 
     if (response.status === 201) {
         toast.success("Selection generated successfully!")

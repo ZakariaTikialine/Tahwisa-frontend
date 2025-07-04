@@ -34,8 +34,8 @@ useEffect(() => {
         // Fetch user info, sessions, periods, and user's inscriptions
         const [userResponse, sessionsResponse, periodesResponse] = await Promise.all([
         api.get("/auth/me"),
-        api.get("/api/sessions"),
-        api.get("/api/periodes"),
+        api.get("/sessions"),
+        api.get("/periodes"),
         ])
 
         const userData = userResponse.data
@@ -79,14 +79,14 @@ const handleRegister = async (sessionId: number) => {
     setSuccess(null)
 
     try {
-    await api.post("/api/inscriptions", {
+    await api.post("/inscriptions", {
         employee_id: user.id,
         session_id: sessionId,
         statut: "active",
     })
 
     // Refresh user's inscriptions
-    const inscriptionsResponse = await api.get(`/api/inscriptions/employee/${user.id}`)
+    const inscriptionsResponse = await api.get(`/inscriptions/employee/${user.id}`)
     setUserInscriptions(inscriptionsResponse.data)
 
     setSuccess("Registration submitted successfully! You are now registered for this session.")
@@ -114,10 +114,10 @@ const handleCancelRegistration = async (inscriptionId: number) => {
     if (!confirm("Are you sure you want to cancel this registration?")) return
 
     try {
-    await api.delete(`/api/inscriptions/${inscriptionId}`)
+    await api.delete(`/inscriptions/${inscriptionId}`)
 
     // Refresh user's inscriptions
-    const inscriptionsResponse = await api.get(`/api/inscriptions/employee/${user!.id}`)
+    const inscriptionsResponse = await api.get(`/inscriptions/employee/${user!.id}`)
     setUserInscriptions(inscriptionsResponse.data)
 
     setSuccess("Registration cancelled successfully.")
