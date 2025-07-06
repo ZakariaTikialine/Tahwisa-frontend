@@ -8,6 +8,7 @@ export interface Employee {
   matricule: string
   department: string
   password?: string
+  role: "admin" | "employee"
 }
 
 // Destination types

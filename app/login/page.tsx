@@ -21,7 +21,7 @@ const [error, setError] = useState<string | null>(null)
 // Check if user is already logged in
 useEffect(() => {
     if (tokenManager.hasToken()) {
-    router.push("/dashboard")
+    router.push("/registration")
     }
 }, [router])
 
@@ -41,8 +41,11 @@ const onSubmit = async (data: LoginData) => {
     const response = await api.post("/auth/login", data)
 
     if (response.data.token) {
-        tokenManager.setToken(response.data.token)
-        router.push("/dashboard")
+        tokenManager.setToken({
+                                token: response.data.token,
+                                employee: response.data.employee
+                            })
+        router.push("/registration")
     } else {
         setError("No token received from server")
     }

@@ -24,6 +24,7 @@ const [formData, setFormData] = useState({
     matricule: "",
     department: "",
     password: "",
+    role: "employee"
 })
 const [loading, setLoading] = useState(true)
 const [saving, setSaving] = useState(false)
@@ -50,6 +51,7 @@ useEffect(() => {
         matricule: userData.matricule || "",
         department: userData.department || "",
         password: "",
+        role: userData.role || "employee"
         })
     } catch (err: any) {
         console.error("Failed to fetch user data:", err)
@@ -118,8 +120,8 @@ if (!user) {
         <AlertCircle className="h-16 w-16 text-red-500 mx-auto" />
         <h1 className="text-2xl font-bold text-slate-900">Profile Not Found</h1>
         <p className="text-slate-600">Unable to load your profile information.</p>
-        <Button onClick={() => router.push("/dashboard")} className="bg-yellow-500 hover:bg-yellow-600">
-            Back to Dashboard
+        <Button onClick={() => router.push("/registration")} className="bg-yellow-500 hover:bg-yellow-600">
+            Back to Registration
         </Button>
         </div>
     </div>
@@ -136,7 +138,7 @@ return (
         <div className="flex items-center gap-4 sm:gap-6">
             <Button
             variant="ghost"
-            onClick={() => router.push("/dashboard")}
+            onClick={() => router.push("/registration")}
             className="text-white hover:bg-white/10 p-2"
             >
             <ArrowLeft className="h-5 w-5 sm:h-6 sm:w-6" />
