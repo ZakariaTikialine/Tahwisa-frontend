@@ -59,10 +59,28 @@ A modern frontend application for the Tahwisa platform, built with Next.js 14 Ap
 
 ```
 ├── app/                 # Next.js pages & layout
+│   ├── (auth)/         # Authentication routes
+│   ├── admin/          # Admin panel pages
+│   ├── globals.css     # Global styles
+│   └── layout.tsx      # Root layout
 ├── components/          # Reusable UI components
-├── lib/                 # API utilities & token management
-└── ...
+│   ├── auth/           # Authentication components
+│   ├── dashboard/      # Dashboard widgets
+│   ├── forms/          # Form components
+│   └── ui/             # Base UI components
+├── lib/                # API utilities & token management
+│   ├── api.js          # Axios configuration
+│   └── auth.js         # Authentication helpers
+├── public/             # Static assets
+└── types/              # TypeScript definitions
 ```
+
+## 🔧 Available Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
 
 ## 🚀 Deployment
 
@@ -70,3 +88,7 @@ Deploy to Vercel and configure the environment variable:
 ```env
 NEXT_PUBLIC_API_URL=https://your-backend-url.railway.app
 ```
+
+## 📄 License
+
+This project is licensed under the MIT License.
