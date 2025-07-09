@@ -55,7 +55,7 @@ return (
     <div className="container px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
         {/* Logo */}
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => router.push("/registration")}>
+        <div className="flex items-center gap-3 cursor-pointer mr-4" onClick={() => router.push("/registration")}>
             <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center shadow-lg">
             <Fuel className="h-6 w-6 text-slate-900" />
             </div>
@@ -63,7 +63,7 @@ return (
             <h1 className="text-xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-300 bg-clip-text text-transparent">
                 Tahwisa
             </h1>
-            <p className="text-xs text-slate-400">Naftal Rewards</p>
+            <p className="text-xs text-slate-400">Naftal</p>
             </div>
         </div>
 
@@ -94,13 +94,7 @@ return (
         </div>
 
         {/* Desktop Actions */}
-        <div className="hidden lg:flex items-center space-x-4">
-            <Button
-            variant="ghost"
-            onClick={() => router.push("/profile")}
-            className="text-slate-300 hover:text-yellow-400 hover:bg-white/10"
-            >
-            </Button>
+        <div className="hidden lg:flex items-center space-x-4 ml-4">
             <Button variant="destructive" onClick={handleLogout} className="bg-red-600 hover:bg-red-700">
             <LogOut className="h-4 w-4 mr-2" />
             Logout
@@ -149,15 +143,6 @@ return (
             })}
 
             <div className="pt-4 border-t border-white/10 space-y-2">
-                <Button
-                variant="ghost"
-                onClick={() => {
-                    router.push("/profile")
-                    setMobileMenuOpen(false)
-                }}
-                className="w-full justify-start gap-3 text-slate-300 hover:text-yellow-400 hover:bg-white/10"
-                >
-                </Button>
                 <Button
                 variant="destructive"
                 onClick={handleLogout}
