@@ -8,10 +8,22 @@ import { Trophy, Medal, Users, Calendar, Building2, Star } from "lucide-react"
 import api from "@/lib/api"
 import type { ResultatSelection } from "@/lib/types"
 import { toast } from "sonner"
+import { tokenManager } from "@/lib/auth"
 
 export default function WinnersPage() {
 const [winners, setWinners] = useState<ResultatSelection[]>([])
 const [loading, setLoading] = useState(true)
+
+
+const [isAdmin, setIsAdmin] = useState(false)
+
+useEffect(() => {
+const employee = tokenManager.getEmployeeData()
+if (employee && employee.role === "admin") {
+    setIsAdmin(true)
+}
+}, [])
+
 
 useEffect(() => {
     fetchWinners()
@@ -28,6 +40,18 @@ const fetchWinners = async () => {
         setLoading(false)
     }
 }
+
+const generateWinners = async () => {
+try {
+    const res = await api.post("/resultat-selections/winners/generate")
+    toast.success("Winners generated successfully")
+    fetchWinners() // Refresh the winners list
+} catch (error) {
+    console.error("Failed to generate winners:", error)
+    toast.error("Error generating winners")
+}
+}
+
 
 const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -85,6 +109,27 @@ return (
         <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900 mb-2">Travel Winners</h1>
         <p className="text-slate-600">Congratulations to all selected participants!</p>
+        {isAdmin && (
+            <div className="mb-6">
+                <button
+                    onClick={async () => {
+                        console.log("🟢 Generate clicked")
+                        try {
+                            const res = await api.post("/resultat-selections/winners/generate")
+                            console.log("✅ Response:", res.data)
+                            toast.success("Winners generated successfully")
+                            fetchWinners()
+                        } catch (err) {
+                            console.error("❌ Error:", err)
+                            toast.error("Failed to generate winners")
+                        }
+                    }}
+                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+                    >
+                    Generate Winners
+                </button>
+            </div>
+            )}
         </div>
 
         {winners.length === 0 ? (
