@@ -1,8 +1,6 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { tokenManager } from "@/lib/auth"
 import api from "@/lib/api"
@@ -14,9 +12,19 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { User, Mail, Phone, Hash, Building, Save, ArrowLeft, AlertCircle, CheckCircle } from "lucide-react"
 import type { Employee } from "@/lib/types"
 
+type FormField = {
+id: keyof Employee
+label: string
+icon: React.ElementType
+type?: string
+required?: boolean
+placeholder?: string
+colSpan?: number
+}
+
 export default function ProfilePage() {
 const [user, setUser] = useState<Employee | null>(null)
-const [formData, setFormData] = useState({
+const [formData, setFormData] = useState<Partial<Employee>>({
     nom: "",
     prénom: "",
     email: "",
@@ -31,6 +39,19 @@ const [saving, setSaving] = useState(false)
 const [error, setError] = useState<string | null>(null)
 const [success, setSuccess] = useState<string | null>(null)
 const router = useRouter()
+
+const personalInfoFields: FormField[] = [
+    { id: "nom", label: "Last Name", icon: User, required: true },
+    { id: "prénom", label: "First Name", icon: User, required: true },
+    { id: "email", label: "Email Address", icon: Mail, type: "email", required: true },
+    { id: "password", label: "New Password (leave blank to keep current)", icon: Hash, type: "password", placeholder: "Enter new password" }
+]
+
+const professionalInfoFields: FormField[] = [
+    { id: "téléphone", label: "Phone Number", icon: Phone, type: "tel", required: true },
+    { id: "matricule", label: "Employee ID", icon: Hash, required: true },
+    { id: "department", label: "Department", icon: Building, required: true, colSpan: 2 }
+]
 
 useEffect(() => {
     const fetchUserData = async () => {
@@ -78,17 +99,14 @@ const handleSubmit = async (e: React.FormEvent) => {
     setSuccess(null)
 
     try {
-    const updateData: Partial<typeof formData> = { ...formData }
+    const updateData = { ...formData }
     if (!updateData.password) {
         delete updateData.password
     }
 
     await api.put(`/employees/${user.id}`, updateData)
     setSuccess("Profile updated successfully!")
-
-    // Clear password field after successful update
-    setFormData((prev) => ({ ...prev, password: "" }))
-
+    setFormData(prev => ({ ...prev, password: "" }))
     setTimeout(() => setSuccess(null), 5000)
     } catch (err: any) {
     const errorMessage = err.response?.data?.message || "Failed to update profile"
@@ -98,9 +116,47 @@ const handleSubmit = async (e: React.FormEvent) => {
     }
 }
 
-const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
+const handleInputChange = (field: keyof Employee, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
 }
+
+const renderFormField = (field: FormField) => {
+    const Icon = field.icon
+    return (
+    <div 
+        key={field.id} 
+        className={`space-y-2 ${field.colSpan ? `md:col-span-${field.colSpan}` : ''}`}
+    >
+        <Label htmlFor={field.id} className="text-sm font-semibold text-slate-700">
+        {field.label}
+        </Label>
+        <div className="relative">
+        <Icon className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+        <Input
+            id={field.id}
+            type={field.type || "text"}
+            value={formData[field.id] || ""}
+            onChange={(e) => handleInputChange(field.id, e.target.value)}
+            className="pl-10 bg-white border-slate-300 focus:border-yellow-400 focus:ring-yellow-400"
+            required={field.required}
+            placeholder={field.placeholder}
+        />
+        </div>
+    </div>
+    )
+}
+
+const renderSection = (title: string, icon: React.ElementType, fields: FormField[]) => (
+    <div className="space-y-6">
+    <div className="flex items-center gap-3 pb-2 border-b border-slate-200">
+        {React.createElement(icon, { className: "h-5 w-5 text-yellow-500" })}
+        <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {fields.map(renderFormField)}
+    </div>
+    </div>
+)
 
 if (loading) {
     return (
@@ -120,7 +176,10 @@ if (!user) {
         <AlertCircle className="h-16 w-16 text-red-500 mx-auto" />
         <h1 className="text-2xl font-bold text-slate-900">Profile Not Found</h1>
         <p className="text-slate-600">Unable to load your profile information.</p>
-        <Button onClick={() => router.push("/registration")} className="bg-yellow-500 hover:bg-yellow-600">
+        <Button 
+            onClick={() => router.push("/registration")} 
+            className="bg-yellow-500 hover:bg-yellow-600 text-white"
+        >
             Back to Registration
         </Button>
         </div>
@@ -133,7 +192,6 @@ return (
     {/* Header */}
     <header className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white shadow-2xl relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 to-sky-500/10"></div>
-
         <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <div className="flex items-center gap-4 sm:gap-6">
             <Button
@@ -143,7 +201,6 @@ return (
             >
             <ArrowLeft className="h-5 w-5 sm:h-6 sm:w-6" />
             </Button>
-
             <div className="flex items-center gap-3 sm:gap-4">
             <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex items-center justify-center shadow-xl">
                 <User className="h-6 w-6 sm:h-8 sm:w-8 text-slate-900" />
@@ -162,7 +219,7 @@ return (
     {/* Main Content */}
     <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
         <div className="max-w-2xl mx-auto space-y-8">
-        {/* Success/Error Messages */}
+        {/* Status Alerts */}
         {success && (
             <Alert className="border-green-200 bg-green-50">
             <CheckCircle className="h-4 w-4 text-green-600" />
@@ -177,7 +234,7 @@ return (
             </Alert>
         )}
 
-        {/* Profile Form */}
+        {/* Profile Form Card */}
         <Card className="border-0 shadow-xl overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-slate-800 to-slate-700 text-white p-6">
             <CardTitle className="flex items-center gap-3 text-xl">
@@ -186,140 +243,10 @@ return (
             </CardTitle>
             </CardHeader>
             <CardContent className="p-6 bg-gradient-to-br from-white to-slate-50">
-            <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Personal Information */}
-                <div className="space-y-6">
-                <div className="flex items-center gap-3 pb-2 border-b border-slate-200">
-                    <User className="h-5 w-5 text-yellow-500" />
-                    <h3 className="text-lg font-semibold text-slate-900">Personal Information</h3>
-                </div>
+            <form onSubmit={handleSubmit} className="space-y-6 py-4">
+                {renderSection("Personal Information", User, personalInfoFields)}
+                {renderSection("Professional Information", Building, professionalInfoFields)}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                    <Label htmlFor="nom" className="text-sm font-semibold text-slate-700">
-                        Last Name
-                    </Label>
-                    <div className="relative">
-                        <User className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                        <Input
-                        id="nom"
-                        value={formData.nom}
-                        onChange={(e) => handleInputChange("nom", e.target.value)}
-                        className="pl-10 bg-white border-slate-300 focus:border-yellow-400 focus:ring-yellow-400"
-                        required
-                        />
-                    </div>
-                    </div>
-
-                    <div className="space-y-2">
-                    <Label htmlFor="prénom" className="text-sm font-semibold text-slate-700">
-                        First Name
-                    </Label>
-                    <div className="relative">
-                        <User className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                        <Input
-                        id="prénom"
-                        value={formData.prénom}
-                        onChange={(e) => handleInputChange("prénom", e.target.value)}
-                        className="pl-10 bg-white border-slate-300 focus:border-yellow-400 focus:ring-yellow-400"
-                        required
-                        />
-                    </div>
-                    </div>
-                </div>
-
-                <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-semibold text-slate-700">
-                    Email Address
-                    </Label>
-                    <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                    <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => handleInputChange("email", e.target.value)}
-                        className="pl-10 bg-white border-slate-300 focus:border-yellow-400 focus:ring-yellow-400"
-                        required
-                    />
-                    </div>
-                </div>
-
-                <div className="space-y-2">
-                    <Label htmlFor="password" className="text-sm font-semibold text-slate-700">
-                    New Password (leave blank to keep current)
-                    </Label>
-                    <Input
-                    id="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => handleInputChange("password", e.target.value)}
-                    className="bg-white border-slate-300 focus:border-yellow-400 focus:ring-yellow-400"
-                    placeholder="Enter new password"
-                    />
-                </div>
-                </div>
-
-                {/* Professional Information */}
-                <div className="space-y-6">
-                <div className="flex items-center gap-3 pb-2 border-b border-slate-200">
-                    <Building className="h-5 w-5 text-sky-500" />
-                    <h3 className="text-lg font-semibold text-slate-900">Professional Information</h3>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                    <Label htmlFor="téléphone" className="text-sm font-semibold text-slate-700">
-                        Phone Number
-                    </Label>
-                    <div className="relative">
-                        <Phone className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                        <Input
-                        id="téléphone"
-                        type="tel"
-                        value={formData.téléphone}
-                        onChange={(e) => handleInputChange("téléphone", e.target.value)}
-                        className="pl-10 bg-white border-slate-300 focus:border-sky-400 focus:ring-sky-400"
-                        required
-                        />
-                    </div>
-                    </div>
-
-                    <div className="space-y-2">
-                    <Label htmlFor="matricule" className="text-sm font-semibold text-slate-700">
-                        Employee ID
-                    </Label>
-                    <div className="relative">
-                        <Hash className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                        <Input
-                        id="matricule"
-                        value={formData.matricule}
-                        onChange={(e) => handleInputChange("matricule", e.target.value)}
-                        className="pl-10 bg-white border-slate-300 focus:border-sky-400 focus:ring-sky-400"
-                        required
-                        />
-                    </div>
-                    </div>
-                </div>
-
-                <div className="space-y-2">
-                    <Label htmlFor="department" className="text-sm font-semibold text-slate-700">
-                    Department
-                    </Label>
-                    <div className="relative">
-                    <Building className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                    <Input
-                        id="department"
-                        value={formData.department}
-                        onChange={(e) => handleInputChange("department", e.target.value)}
-                        className="pl-10 bg-white border-slate-300 focus:border-sky-400 focus:ring-sky-400"
-                        required
-                    />
-                    </div>
-                </div>
-                </div>
-
-                {/* Submit Button */}
                 <div className="pt-6">
                 <Button
                     type="submit"
