@@ -1,25 +1,36 @@
 "use client"
 
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import api from '@/lib/api'
 import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react'
 
 export default function VerifyEmailPage() {
 const router = useRouter()
-const searchParams = useSearchParams()
-const token = searchParams.get('token')
+const [token, setToken] = useState<string | null>(null)
 const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
 const [message, setMessage] = useState('')
+const [isMounted, setIsMounted] = useState(false)
 
+// Get token client-side
 useEffect(() => {
+    setIsMounted(true)
+    const searchParams = new URLSearchParams(window.location.search)
+    const tokenParam = searchParams.get('token')
+    setToken(tokenParam)
+}, [])
+
+// Verify email when token is available
+useEffect(() => {
+    if (!isMounted) return
+    
     if (token) {
     verifyEmail(token)
     } else {
     setStatus('error')
     setMessage('No verification token provided')
     }
-}, [token])
+}, [token, isMounted])
 
 const verifyEmail = async (token: string) => {
     try {
@@ -31,6 +42,18 @@ const verifyEmail = async (token: string) => {
     setStatus('error')
     setMessage(error.response?.data?.message || 'Email verification failed')
     }
+}
+
+// Loading state while mounting
+if (!isMounted) {
+    return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
+        <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8 text-center">
+        <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+        <p className="mt-4 text-slate-600">Loading verification...</p>
+        </div>
+    </div>
+    )
 }
 
 return (
