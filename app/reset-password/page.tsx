@@ -1,11 +1,11 @@
 "use client"
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { Lock, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 import api from '@/lib/api'
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
 const router = useRouter()
 const searchParams = useSearchParams()
 const token = searchParams.get('token')
@@ -134,5 +134,13 @@ return (
         </form>
     </div>
     </div>
+)
+}
+
+export default function ResetPasswordPage() {
+return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+    <ResetPasswordForm />
+    </Suspense>
 )
 }
