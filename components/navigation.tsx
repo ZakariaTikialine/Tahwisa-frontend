@@ -5,51 +5,101 @@ import { useRouter, usePathname } from "next/navigation"
 import { tokenManager } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
 import {
-  Fuel, Home, User, Calendar, Plane, Trophy, LogOut, Menu, X, 
-  Building2, ChevronDown, ChevronRight, type LucideIcon
+  Fuel, Home, User, Calendar, Plane, Trophy, LogOut, Menu, X,
+  Building2, ChevronDown, ChevronRight, Loader2
 } from "lucide-react"
 
 type NavigationItem = {
   href: string
   label: string
-  icon: LucideIcon
+  icon: React.ComponentType<{ className?: string }>
   admin?: boolean
+}
+
+type AuthState = {
+  isLoggedIn: boolean
+  isAdmin: boolean
+  isLoading: boolean
 }
 
 export function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [isAdmin, setIsAdmin] = useState(false)
   const [adminMenuOpen, setAdminMenuOpen] = useState(false)
+  const [authState, setAuthState] = useState<AuthState>({ 
+    isLoggedIn: false, 
+    isAdmin: false,
+    isLoading: true
+  })
   const router = useRouter()
   const pathname = usePathname()
 
-  useEffect(() => {
-    const checkAuthStatus = () => {
-      const hasToken = tokenManager.hasToken()
-      setIsLoggedIn(hasToken)
+  const fetchAuthStatus = async (): Promise<void> => {
+    try {
+      setAuthState(prev => ({ ...prev, isLoading: true }))
       
-      if (hasToken) {
-        const employeeData = tokenManager.getEmployeeData()
-        if (employeeData) {
-          setIsAdmin(employeeData.role === "admin")
+      // 1. Check local token first
+      const token = tokenManager.getToken()
+      if (!token) throw new Error("No token found")
+
+      // 2. Verify with backend
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+        credentials: 'include'
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        if (errorData.code === 'ROLE_CHANGED') {
+          tokenManager.removeToken()
         }
-      } else {
-        setIsAdmin(false)
+        throw new Error(errorData.message || "Auth check failed")
       }
+
+      const userData = await response.json()
+      
+      // 3. Sync with local storage
+      tokenManager.setToken({
+        token,
+        employee: userData
+      })
+
+      setAuthState({
+        isLoggedIn: true,
+        isAdmin: userData.role === "admin",
+        isLoading: false
+      })
+
+    } catch (error) {
+      console.error("Auth check error:", error)
+      tokenManager.removeToken()
+      setAuthState({
+        isLoggedIn: false,
+        isAdmin: false,
+        isLoading: false
+      })
     }
-    checkAuthStatus()
-  }, [])
+  }
 
-  if (!isLoggedIn) return null
+  useEffect(() => {
+    fetchAuthStatus()
 
-  const handleLogout = () => {
+    // Set up periodic refresh (every 2 minutes)
+    const interval = setInterval(fetchAuthStatus, 120000)
+    return () => clearInterval(interval)
+  }, [pathname])
+
+  const handleLogout = (): void => {
     tokenManager.removeToken()
     router.push("/")
+    setAuthState({
+      isLoggedIn: false,
+      isAdmin: false,
+      isLoading: false
+    })
   }
 
   const navigationItems: NavigationItem[] = [
-    ...(isAdmin ? [
+    ...(authState.isAdmin ? [
       { href: "/admin/dashboard", label: "Dashboard", icon: Home, admin: true },
       { href: "/admin/destinations", label: "Destinations", icon: Building2, admin: true },
       { href: "/admin/sessions", label: "Sessions", icon: Calendar, admin: true },
@@ -62,6 +112,18 @@ export function Navigation() {
 
   const userItems = navigationItems.filter(item => !item.admin)
   const adminItems = navigationItems.filter(item => item.admin)
+
+  if (authState.isLoading) {
+    return (
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white shadow-xl sticky top-0 z-50">
+        <div className="container px-4 mx-auto h-16 flex items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-yellow-400" />
+        </div>
+      </div>
+    )
+  }
+
+  if (!authState.isLoggedIn) return null
 
   return (
     <nav className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white shadow-xl sticky top-0 z-50">
@@ -97,7 +159,7 @@ export function Navigation() {
             ))}
             
             {/* Admin Dropdown */}
-            {isAdmin && (
+            {authState.isAdmin && (
               <div className="relative">
                 <Button
                   variant="ghost"
@@ -171,7 +233,7 @@ export function Navigation() {
               ))}
               
               {/* Admin Items with Accordion */}
-              {isAdmin && (
+              {authState.isAdmin && (
                 <div className="space-y-1">
                   <button
                     onClick={() => setAdminMenuOpen(!adminMenuOpen)}
