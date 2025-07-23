@@ -142,7 +142,7 @@ return (
                         <Button
                         variant="outline"
                         size="sm"
-                        className="flex-1 bg-transparent"
+                        className="cursor-pointer flex-1 bg-transparent"
                         onClick={() => setSelectedSession(session)}
                         >
                         View Details
@@ -174,7 +174,7 @@ return (
                                 handleRegister(selectedSession.id)
                                 }}
                                 disabled={!isAvailable || registering === selectedSession.id}
-                                className="w-full bg-yellow-500 hover:bg-yellow-600 text-slate-900"
+                                className="cursor-pointer w-full bg-yellow-500 hover:bg-yellow-600 text-slate-900"
                             >
                                 {registering === selectedSession.id ? (
                                 "Registering..."
@@ -195,7 +195,7 @@ return (
                     size="sm"
                     onClick={() => handleRegister(session.id)}
                     disabled={!isAvailable || registering === session.id}
-                    className="bg-yellow-500 hover:bg-yellow-600 text-slate-900"
+                    className="cursor-pointer bg-yellow-500 hover:bg-yellow-600 text-slate-900"
                     >
                     {registering === session.id ? (
                         "..."

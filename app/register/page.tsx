@@ -146,7 +146,7 @@ export default function RegisterPage() {
               />
               <button
                 type="button"
-                className="absolute right-2 top-2 text-white"
+                className="cursor-pointer absolute right-2 top-2 text-white"
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -184,7 +184,7 @@ export default function RegisterPage() {
             {errors.structure && <p className="text-sm text-red-400">{errors.structure.message}</p>}
           </div>
 
-          <Button disabled={isLoading} type="submit" className="w-full bg-gradient-to-r from-yellow-500 to-yellow-400 text-slate-900 hover:from-yellow-400 hover:to-yellow-300">
+          <Button disabled={isLoading} type="submit" className="cursor-pointer w-full bg-gradient-to-r from-yellow-500 to-yellow-400 text-slate-900 hover:from-yellow-400 hover:to-yellow-300">
             {isLoading ? (
               <span className="flex items-center justify-center gap-2">
                 <div className="w-4 h-4 border-2 border-slate-900 border-t-transparent rounded-full animate-spin" />

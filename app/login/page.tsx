@@ -162,7 +162,7 @@ export default function LoginPage() {
                             {unverifiedEmail && (
                                 <button
                                     onClick={handleResendVerification}
-                                    className="mt-2 text-yellow-400 hover:text-yellow-300 text-sm font-medium flex items-center gap-1"
+                                    className="cursor-pointer mt-2 text-yellow-400 hover:text-yellow-300 text-sm font-medium flex items-center gap-1"
                                 >
                                     <RefreshCw className="h-4 w-4" />
                                     Resend verification email
@@ -171,7 +171,7 @@ export default function LoginPage() {
                             {process.env.NODE_ENV === 'development' && (
                                 <button 
                                     onClick={() => console.log(debugInfo)} 
-                                    className="mt-2 text-xs text-red-400 hover:text-red-300"
+                                    className="cursor-pointer mt-2 text-xs text-red-400 hover:text-red-300"
                                 >
                                     Click to view debug details in console
                                 </button>
@@ -186,7 +186,7 @@ export default function LoginPage() {
                                 <span className="font-mono text-blue-400">Debug Information</span>
                                 <button 
                                     onClick={() => setDebugInfo(null)}
-                                    className="text-blue-300 hover:text-blue-200 text-xs"
+                                    className="cursor-pointer text-blue-300 hover:text-blue-200 text-xs"
                                 >
                                     Hide
                                 </button>
@@ -240,7 +240,7 @@ export default function LoginPage() {
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-300 transition-colors"
+                                    className="cursor-pointer absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-300 transition-colors"
                                 >
                                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                                 </button>
@@ -257,7 +257,7 @@ export default function LoginPage() {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="w-full bg-gradient-to-r from-yellow-500 to-yellow-400 text-slate-900 py-4 px-6 rounded-xl font-bold text-lg hover:from-yellow-400 hover:to-yellow-300 focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl hover:shadow-2xl transform hover:-translate-y-0.5 group"
+                            className="cursor-pointer w-full bg-gradient-to-r from-yellow-500 to-yellow-400 text-slate-900 py-4 px-6 rounded-xl font-bold text-lg hover:from-yellow-400 hover:to-yellow-300 focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl hover:shadow-2xl transform hover:-translate-y-0.5 group"
                         >
                             {isLoading ? (
                                 <div className="flex items-center justify-center">

@@ -124,7 +124,7 @@ return (
                             toast.error("Failed to generate winners")
                         }
                     }}
-                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+                    className="cursor-pointer bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
                     >
                     Generate Winners
                 </button>

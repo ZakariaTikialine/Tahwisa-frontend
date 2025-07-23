@@ -84,7 +84,7 @@ return (
         <div className="mt-6 text-center">
             <button
             onClick={() => router.push('/login')}
-            className="text-blue-600 hover:text-blue-800 font-medium"
+            className="cursor-pointer text-blue-600 hover:text-blue-800 font-medium"
             >
             Go to Login
             </button>

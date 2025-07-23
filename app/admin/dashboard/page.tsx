@@ -418,7 +418,7 @@
                                     <p className="text-black text-center py-4">No sessions available</p>
                                 )}
 
-                                <Button onClick={() => router.push("/travel-periods")} className="w-full bg-blue-600 hover:bg-blue-700">
+                                <Button onClick={() => router.push("/travel-periods")} className="cursor-pointer w-full bg-blue-600 hover:bg-blue-700">
                                     View All Sessions
                                 </Button>
                             </CardContent>
@@ -470,7 +470,7 @@
 
                                 <Button
                                     onClick={() => router.push("/registration")}
-                                    className="w-full bg-yellow-500 hover:bg-yellow-600 text-black"
+                                    className="cursor-pointer w-full bg-yellow-500 hover:bg-yellow-600 text-black"
                                 >
                                     Register for Trip
                                 </Button>
@@ -485,19 +485,19 @@
                         </CardHeader>
                         <CardContent>
                             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                                <Button onClick={() => router.push("/travel-periods")} variant="outline" className="h-20 flex-col gap-2">
+                                <Button onClick={() => router.push("/travel-periods")} variant="outline" className="cursor-pointer h-20 flex-col gap-2">
                                     <Calendar className="h-6 w-6" />
                                     View Periods
                                 </Button>
-                                <Button onClick={() => router.push("/registration")} variant="outline" className="h-20 flex-col gap-2">
+                                <Button onClick={() => router.push("/registration")} variant="outline" className="cursor-pointer h-20 flex-col gap-2">
                                     <Plane className="h-6 w-6" />
                                     Register
                                 </Button>
-                                <Button onClick={() => router.push("/winners")} variant="outline" className="h-20 flex-col gap-2">
+                                <Button onClick={() => router.push("/winners")} variant="outline" className="cursor-pointer h-20 flex-col gap-2">
                                     <Trophy className="h-6 w-6" />
                                     View Winners
                                 </Button>
-                                <Button onClick={() => router.push("/profile")} variant="outline" className="h-20 flex-col gap-2">
+                                <Button onClick={() => router.push("/profile")} variant="outline" className="cursor-pointer h-20 flex-col gap-2">
                                     <Users className="h-6 w-6" />
                                     Update Profile
                                 </Button>

@@ -164,7 +164,7 @@ export function Navigation() {
                 <Button
                   variant="ghost"
                   onClick={() => setAdminMenuOpen(!adminMenuOpen)}
-                  className={`flex items-center gap-1 px-3 text-sm font-medium transition-colors ${
+                  className={`cursor-pointer flex items-center gap-1 px-3 text-sm font-medium transition-colors ${
                     pathname.startsWith("/admin")
                       ? "text-yellow-400 bg-yellow-400/10"
                       : "text-slate-300 hover:text-yellow-400 hover:bg-white/10"
@@ -183,7 +183,7 @@ export function Navigation() {
                           item={item}
                           pathname={pathname}
                           router={router}
-                          className="w-full justify-start text-left px-4 py-2 text-sm hover:bg-slate-700"
+                          className="cursor-pointer w-full justify-start text-left px-4 py-2 text-sm hover:bg-slate-700"
                           onClick={() => setAdminMenuOpen(false)}
                           iconPosition="left"
                         />
@@ -198,7 +198,7 @@ export function Navigation() {
             <Button 
               variant="destructive" 
               onClick={handleLogout}
-              className="h-9 text-sm bg-red-600 hover:bg-red-700 px-3"
+              className="cursor-pointer h-9 text-sm bg-red-600 hover:bg-red-700 px-3"
             >
               <LogOut className="h-4 w-4 mr-2" />
               Logout
@@ -210,7 +210,7 @@ export function Navigation() {
             variant="ghost"
             size="sm"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden text-white hover:bg-white/10 p-2"
+            className="cursor-pointer md:hidden text-white hover:bg-white/10 p-2"
             aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -237,7 +237,7 @@ export function Navigation() {
                 <div className="space-y-1">
                   <button
                     onClick={() => setAdminMenuOpen(!adminMenuOpen)}
-                    className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-slate-300 hover:text-yellow-400 hover:bg-slate-800 rounded-md"
+                    className="cursor-pointer w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-slate-300 hover:text-yellow-400 hover:bg-slate-800 rounded-md"
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-5 h-5 flex items-center justify-center">
@@ -272,7 +272,7 @@ export function Navigation() {
                   handleLogout()
                   setMobileMenuOpen(false)
                 }}
-                className="w-full justify-start gap-3 px-4 py-2 text-sm mt-2"
+                className="cursor-pointer w-full justify-start gap-3 px-4 py-2 text-sm mt-2"
               >
                 <LogOut className="h-4 w-4" />
                 Logout
@@ -305,7 +305,7 @@ function NavButton({ item, pathname, router, className = "", onClick, iconPositi
         router.push(item.href)
         onClick()
       }}
-      className={`flex items-center gap-2 px-3 text-sm font-medium transition-colors ${
+      className={`cursor-pointer flex items-center gap-2 px-3 text-sm font-medium transition-colors ${
         isActive
           ? "text-yellow-400 bg-yellow-400/10"
           : "text-slate-300 hover:text-yellow-400 hover:bg-white/10"
@@ -336,7 +336,7 @@ function MobileNavButton({ item, pathname, router, onClick, indent = false }: Mo
         router.push(item.href)
         onClick()
       }}
-      className={`w-full flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+      className={`cursor-pointer w-full flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
         isActive
           ? "text-yellow-400 bg-yellow-400/10"
           : "text-slate-300 hover:text-yellow-400 hover:bg-slate-800"

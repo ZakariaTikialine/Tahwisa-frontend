@@ -178,7 +178,7 @@ if (!user) {
         <p className="text-slate-600">Unable to load your profile information.</p>
         <Button 
             onClick={() => router.push("/registration")} 
-            className="bg-yellow-500 hover:bg-yellow-600 text-white"
+            className="cursor-pointer bg-yellow-500 hover:bg-yellow-600 text-white"
         >
             Back to Registration
         </Button>
@@ -197,7 +197,7 @@ return (
             <Button
             variant="ghost"
             onClick={() => router.push("/registration")}
-            className="text-white hover:bg-white/10 p-2"
+            className="cursor-pointer text-white hover:bg-white/10 p-2"
             >
             <ArrowLeft className="h-5 w-5 sm:h-6 sm:w-6" />
             </Button>
@@ -251,7 +251,7 @@ return (
                 <Button
                     type="submit"
                     disabled={saving}
-                    className="w-full bg-gradient-to-r from-yellow-500 to-yellow-400 text-slate-900 hover:from-yellow-400 hover:to-yellow-300 font-semibold py-3"
+                    className="cursor-pointer w-full bg-gradient-to-r from-yellow-500 to-yellow-400 text-slate-900 hover:from-yellow-400 hover:to-yellow-300 font-semibold py-3"
                 >
                     {saving ? (
                     <div className="flex items-center justify-center">
