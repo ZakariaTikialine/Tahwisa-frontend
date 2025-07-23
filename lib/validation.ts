@@ -27,9 +27,9 @@ export const registerSchema = z.object({
     matricule: z.string()
         .min(3, "Employee ID must be at least 3 characters")
         .max(20, "Employee ID cannot exceed 20 characters"),
-    department: z.string()
-        .min(2, "Department must be at least 2 characters")
-        .max(50, "Department cannot exceed 50 characters")
+    structure: z.string()
+        .min(2, "Structure must be at least 2 characters")
+        .max(50, "Structure cannot exceed 50 characters")
 });
 
 export const loginSchema = z.object({

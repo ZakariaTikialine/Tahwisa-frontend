@@ -8,7 +8,7 @@ employee: {
     password: string
     téléphone: string
     matricule: string
-    department: string
+    structure: string
     role: string
 }
 }

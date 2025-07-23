@@ -179,9 +179,9 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <Label className="text-white">Department</Label>
-            <Input className="bg-white/10 text-white border-white/20" {...register("department")} placeholder="e.g. HR" />
-            {errors.department && <p className="text-sm text-red-400">{errors.department.message}</p>}
+            <Label className="text-white">Structure</Label>
+            <Input className="bg-white/10 text-white border-white/20" {...register("structure")} placeholder="e.g. HR" />
+            {errors.structure && <p className="text-sm text-red-400">{errors.structure.message}</p>}
           </div>
 
           <Button disabled={isLoading} type="submit" className="w-full bg-gradient-to-r from-yellow-500 to-yellow-400 text-slate-900 hover:from-yellow-400 hover:to-yellow-300">

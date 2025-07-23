@@ -6,7 +6,7 @@ export interface Employee {
   email: string
   téléphone: string
   matricule: string
-  department: string
+  structure: string
   password?: string
   role: "admin" | "employee"
 }

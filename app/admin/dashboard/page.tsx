@@ -331,7 +331,7 @@
                             Welcome back, {employee?.prénom} {employee?.nom}!
                         </h1>
                         <p className="text-black">
-                            Employee ID: {employee?.matricule} | Department: {employee?.department}
+                            Employee ID: {employee?.matricule} | Structure: {employee?.structure}
                         </p>
                     </div>
 

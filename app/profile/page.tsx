@@ -30,7 +30,7 @@ const [formData, setFormData] = useState<Partial<Employee>>({
     email: "",
     téléphone: "",
     matricule: "",
-    department: "",
+    structure: "",
     password: "",
     role: "employee"
 })
@@ -50,7 +50,7 @@ const personalInfoFields: FormField[] = [
 const professionalInfoFields: FormField[] = [
     { id: "téléphone", label: "Phone Number", icon: Phone, type: "tel", required: true },
     { id: "matricule", label: "Employee ID", icon: Hash, required: true },
-    { id: "department", label: "Department", icon: Building, required: true, colSpan: 2 }
+    { id: "structure", label: "Structure", icon: Building, required: true, colSpan: 2 }
 ]
 
 useEffect(() => {
@@ -70,7 +70,7 @@ useEffect(() => {
         email: userData.email || "",
         téléphone: userData.téléphone || "",
         matricule: userData.matricule || "",
-        department: userData.department || "",
+        structure: userData.structure || "",
         password: "",
         role: userData.role || "employee"
         })
