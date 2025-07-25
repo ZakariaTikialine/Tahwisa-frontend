@@ -30,202 +30,279 @@
         date_selection: string | null
     }
 
-    function AdminHistorySection() {
-        const [fullHistory, setFullHistory] = useState<FullHistoryRow[]>([])
-        const [search, setSearch] = useState("")
-        const [filterYear, setFilterYear] = useState("")
-        const [filterStatus, setFilterStatus] = useState("")
+const AdminHistorySection = () => {
+const [fullHistory, setFullHistory] = useState<FullHistoryRow[]>([])
+const [employees, setEmployees] = useState<Employee[]>([])
+const [search, setSearch] = useState("")
+const [filterYear, setFilterYear] = useState("")
+const [filterStatus, setFilterStatus] = useState("")
+const [showEmployeesTable, setShowEmployeesTable] = useState(false)
+const [empFilters, setEmpFilters] = useState({
+    nom: "",
+    prénom: "",
+    matricule: "",
+    structure: "",
+    email: "",
+    téléphone: ""
+})
 
-        useEffect(() => {
-            fetchFullHistory()
-        }, [])
+useEffect(() => {
+    fetchFullHistory()
+}, [])
 
-        const fetchFullHistory = async () => {
-            try {
-                const res = await api.get("/inscriptions/full-history")
-                setFullHistory(res.data)
-            } catch (err) {
-                console.error("Failed to load full history", err)
-            }
-        }
-
-        const filteredHistory = fullHistory.filter(row => {
-            const matchesSearch = `${row.employee_nom} ${row.employee_prenom} ${row.session_nom}`
-                .toLowerCase()
-                .includes(search.toLowerCase())
-            const matchesYear = filterYear ? row.date_inscription.startsWith(filterYear) : true
-            const matchesStatus = filterStatus ? row.statut === filterStatus : true
-            return matchesSearch && matchesYear && matchesStatus
-        })
-
-        const downloadCSV = () => {
-            const headers = [
-                "Nom", "Prénom", "Session", "Date Inscription", "Statut", "Type Sélection", "Ordre", "Date Sélection"
-            ]
-            const rows = filteredHistory.map(row => [
-                row.employee_nom,
-                row.employee_prenom,
-                row.session_nom,
-                row.date_inscription,
-                row.statut,
-                row.type_selection || "",
-                row.ordre_priorite?.toString() || "",
-                row.date_selection || ""
-            ])
-            const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n")
-            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-            saveAs(blob, `tahwisa_history_${Date.now()}.csv`)
-        }
-
-        const getStatusBadge = (status: string) => {
-            const styles = {
-                active: "bg-green-100 text-green-800 border border-green-200",
-                completed: "bg-blue-100 text-blue-800 border border-blue-200",
-                cancelled: "bg-red-100 text-red-800 border border-red-200",
-                pending: "bg-yellow-100 text-yellow-800 border border-yellow-200",
-                selected: "bg-purple-100 text-purple-800 border border-purple-200"
-            }
-            return styles[status as keyof typeof styles] || "bg-gray-100 text-gray-800 border border-gray-200"
-        }
-
-        const getTypeSelectionBadge = (type: string | null) => {
-            if (!type) return null
-            const styles = {
-                automatique: "bg-indigo-50 text-indigo-700 border border-indigo-200",
-                manuelle: "bg-orange-50 text-orange-700 border border-orange-200"
-            }
-            return styles[type as keyof typeof styles] || "bg-gray-50 text-gray-700 border border-gray-200"
-        }
-
-        const uniqueStatuses = [...new Set(fullHistory.map(row => row.statut))]
-        const uniqueYears = [...new Set(fullHistory.map(row => row.date_inscription.split('-')[0]))]
-
-        return (
-            <Card className="mt-8 shadow-lg border-0">
-                <CardHeader >
-                    <CardTitle className="flex justify-between items-center text-xl font-semibold text-gray-800">
-                        <div className="flex items-center gap-2 text-white">
-                            📊 Inscriptions & Sélections
-                            <span className="text-sm font-normal bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                                {filteredHistory.length} résultats
-                            </span>
-                        </div>
-                        <Button onClick={downloadCSV} className="cursor-pointer bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white border-0 shadow-md">
-                            <Download className="w-4 h-4 mr-2" />
-                            Exporter CSV
-                        </Button>
-                    </CardTitle>
-                    
-                    {/* Filters */}
-                    <div className="flex flex-wrap gap-3 mt-4">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                            <Input
-                                placeholder="Rechercher nom, prénom, session..."
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                                className="pl-10 w-64 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                            />
-                        </div>
-                        
-                        <select
-                            value={filterYear}
-                            onChange={e => setFilterYear(e.target.value)}
-                            className="cursor-pointer px-3 py-2 border border-gray-200 rounded-md focus:border-blue-500 focus:ring-blue-500 text-sm"
-                        >
-                            <option value="">Toutes les années</option>
-                            {uniqueYears.map(year => (
-                                <option key={year} value={year}>{year}</option>
-                            ))}
-                        </select>
-
-                        <select
-                            value={filterStatus}
-                            onChange={e => setFilterStatus(e.target.value)}
-                            className="cursor-pointer px-3 py-2 border border-gray-200 rounded-md focus:border-blue-500 focus:ring-blue-500 text-sm"
-                        >
-                            <option value="">Tous les statuts</option>
-                            {uniqueStatuses.map(status => (
-                                <option key={status} value={status}>{status}</option>
-                            ))}
-                        </select>
-                    </div>
-                </CardHeader>
-                
-                <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead>
-                                <tr>
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Employé</th>
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Session</th>
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date Inscription</th>
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Statut</th>
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Type Sélection</th>
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Ordre</th>
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date Sélection</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredHistory.map((row, index) => (
-                                    <tr key={index} className="hover:bg-gray-50 transition-colors duration-150">
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="font-medium text-gray-900">
-                                                {row.employee_prenom} {row.employee_nom}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-sm text-gray-900 font-medium">{row.session_nom}</div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                            {new Date(row.date_inscription).toLocaleDateString('fr-FR')}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(row.statut)}`}>
-                                                {row.statut}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            {row.type_selection ? (
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTypeSelectionBadge(row.type_selection)}`}>
-                                                    {row.type_selection}
-                                                </span>
-                                            ) : (
-                                                <span className="text-gray-400">—</span>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                            {row.ordre_priorite ? (
-                                                <span className="inline-flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold">
-                                                    {row.ordre_priorite}
-                                                </span>
-                                            ) : (
-                                                <span className="text-gray-400">—</span>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                            {row.date_selection ? 
-                                                new Date(row.date_selection).toLocaleDateString('fr-FR') : 
-                                                <span className="text-gray-400">—</span>
-                                            }
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                        
-                        {filteredHistory.length === 0 && (
-                            <div className="text-center py-12">
-                                <div className="text-gray-400 text-lg mb-2">📝</div>
-                                <p className="text-gray-500">Aucun résultat trouvé</p>
-                                <p className="text-sm text-gray-400">Essayez de modifier vos filtres</p>
-                            </div>
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
-        )
+const fetchFullHistory = async () => {
+    try {
+    const res = await api.get("/inscriptions/full-history")
+    setFullHistory(res.data)
+    } catch (err) {
+    console.error("Failed to load full history", err)
     }
+}
+
+const fetchEmployees = async () => {
+    try {
+    const res = await api.get("/employees")
+    setEmployees(res.data)
+    } catch (err) {
+    console.error("Failed to load employees", err)
+    }
+}
+
+const handleToggleView = () => {
+    if (!showEmployeesTable) fetchEmployees()
+    setShowEmployeesTable(prev => !prev)
+}
+
+const handleEmpFilterChange = (field: keyof typeof empFilters, value: string) => {
+    setEmpFilters(prev => ({ ...prev, [field]: value }))
+}
+
+const filteredHistory = fullHistory.filter(row => {
+    const matchesSearch = `${row.employee_nom} ${row.employee_prenom} ${row.session_nom}`
+    .toLowerCase()
+    .includes(search.toLowerCase())
+    const matchesYear = filterYear ? row.date_inscription.startsWith(filterYear) : true
+    const matchesStatus = filterStatus ? row.statut === filterStatus : true
+    return matchesSearch && matchesYear && matchesStatus
+})
+
+const filteredEmployees = employees.filter(emp =>
+    emp.nom.toLowerCase().includes(empFilters.nom.toLowerCase()) &&
+    emp.prénom.toLowerCase().includes(empFilters.prénom.toLowerCase()) &&
+    emp.matricule.toLowerCase().includes(empFilters.matricule.toLowerCase()) &&
+    emp.structure.toLowerCase().includes(empFilters.structure.toLowerCase()) &&
+    emp.email.toLowerCase().includes(empFilters.email.toLowerCase()) &&
+    emp.téléphone.toLowerCase().includes(empFilters.téléphone.toLowerCase())
+)
+
+const downloadCSV = () => {
+    const headers = [
+    "Nom", "Prénom", "Session", "Date Inscription", "Statut", "Type Sélection", "Ordre", "Date Sélection"
+    ]
+    const rows = filteredHistory.map(row => [
+    row.employee_nom,
+    row.employee_prenom,
+    row.session_nom,
+    row.date_inscription,
+    row.statut,
+    row.type_selection || "",
+    row.ordre_priorite?.toString() || "",
+    row.date_selection || ""
+    ])
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n")
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    saveAs(blob, `tahwisa_history_${Date.now()}.csv`)
+}
+
+const getStatusBadge = (status: string) => {
+    const styles = {
+    active: "bg-green-100 text-green-800 border border-green-200",
+    completed: "bg-blue-100 text-blue-800 border border-blue-200",
+    cancelled: "bg-red-100 text-red-800 border border-red-200",
+    pending: "bg-yellow-100 text-yellow-800 border border-yellow-200",
+    selected: "bg-purple-100 text-purple-800 border border-purple-200"
+    }
+    return styles[status as keyof typeof styles] || "bg-gray-100 text-gray-800 border border-gray-200"
+}
+
+const getTypeSelectionBadge = (type: string | null) => {
+    if (!type) return null
+    const styles = {
+    automatique: "bg-indigo-50 text-indigo-700 border border-indigo-200",
+    manuelle: "bg-orange-50 text-orange-700 border border-orange-200"
+    }
+    return styles[type as keyof typeof styles] || "bg-gray-50 text-gray-700 border border-gray-200"
+}
+
+const uniqueStatuses = [...new Set(fullHistory.map(row => row.statut))]
+const uniqueYears = [...new Set(fullHistory.map(row => row.date_inscription.split('-')[0]))]
+
+return (
+    <Card className="mt-8 shadow-lg border-0">
+    <CardHeader>
+        <CardTitle className="flex justify-between items-center text-xl font-semibold text-gray-800">
+        <div className="flex items-center gap-2 text-white">
+            {showEmployeesTable ? "👥 Liste des Employés" : "📊 Inscriptions & Sélections"}
+            {!showEmployeesTable && (
+            <span className="text-sm font-normal bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                {filteredHistory.length} résultats
+            </span>
+            )}
+        </div>
+
+        <div className="flex gap-2">
+            {!showEmployeesTable && (
+            <Button onClick={downloadCSV} className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white border-0 shadow-md">
+                <Download className="w-4 h-4 mr-2" />
+                Exporter CSV
+            </Button>
+            )}
+            <Button onClick={handleToggleView} className="bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-300">
+            {showEmployeesTable ? "⬅ Retour à l’historique" : "👥 Voir tous les employés"}
+            </Button>
+        </div>
+        </CardTitle>
+
+        {!showEmployeesTable && (
+        <div className="flex flex-wrap gap-3 mt-4">
+            <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+                placeholder="Rechercher nom, prénom, session..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="pl-10 w-64 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+            />
+            </div>
+
+            <select
+            value={filterYear}
+            onChange={e => setFilterYear(e.target.value)}
+            className="cursor-pointer px-3 py-2 border border-gray-200 rounded-md focus:border-blue-500 focus:ring-blue-500 text-sm"
+            >
+            <option value="">Toutes les années</option>
+            {uniqueYears.map(year => (
+                <option key={year} value={year}>{year}</option>
+            ))}
+            </select>
+
+            <select
+            value={filterStatus}
+            onChange={e => setFilterStatus(e.target.value)}
+            className="cursor-pointer px-3 py-2 border border-gray-200 rounded-md focus:border-blue-500 focus:ring-blue-500 text-sm"
+            >
+            <option value="">Tous les statuts</option>
+            {uniqueStatuses.map(status => (
+                <option key={status} value={status}>{status}</option>
+            ))}
+            </select>
+        </div>
+        )}
+    </CardHeader>
+
+    <CardContent className="p-0">
+        <div className="overflow-x-auto">
+        {showEmployeesTable ? (
+            <table className="w-full">
+            <thead>
+                <tr>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Nom</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Prénom</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Matricule</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Structure</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Email</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Téléphone</th>
+                </tr>
+                <tr className="bg-gray-50">
+                {Object.entries(empFilters).map(([key, val]) => (
+                    <th key={key} className="px-6 py-2">
+                    <input
+                        className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
+                        placeholder="🔍"
+                        value={val}
+                        onChange={e => handleEmpFilterChange(key as keyof typeof empFilters, e.target.value)}
+                    />
+                    </th>
+                ))}
+                </tr>
+            </thead>
+            <tbody>
+                {filteredEmployees.map((emp, index) => (
+                <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">{emp.nom}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{emp.prénom}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{emp.matricule}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{emp.structure}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{emp.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{emp.téléphone}</td>
+                </tr>
+                ))}
+            </tbody>
+            </table>
+        ) : (
+            <table className="w-full">
+            <thead>
+                <tr>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Employé</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Session</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Date Inscription</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Statut</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Type Sélection</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Ordre</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Date Sélection</th>
+                </tr>
+            </thead>
+            <tbody>
+                {filteredHistory.map((row, index) => (
+                <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="font-medium text-gray-900">
+                        {row.employee_prenom} {row.employee_nom}
+                    </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900 font-medium">{row.session_nom}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700">
+                    {new Date(row.date_inscription).toLocaleDateString("fr-FR")}
+                    </td>
+                    <td className="px-6 py-4">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(row.statut)}`}>
+                        {row.statut}
+                    </span>
+                    </td>
+                    <td className="px-6 py-4">
+                    {row.type_selection ? (
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTypeSelectionBadge(row.type_selection)}`}>
+                        {row.type_selection}
+                        </span>
+                    ) : (
+                        <span className="text-gray-400">—</span>
+                    )}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-700">
+                    {row.ordre_priorite ? (
+                        <span className="inline-flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold">
+                        {row.ordre_priorite}
+                        </span>
+                    ) : (
+                        <span className="text-gray-400">—</span>
+                    )}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-700">
+                    {row.date_selection
+                        ? new Date(row.date_selection).toLocaleDateString("fr-FR")
+                        : <span className="text-gray-400">—</span>}
+                    </td>
+                </tr>
+                ))}
+            </tbody>
+            </table>
+        )}
+        </div>
+    </CardContent>
+    </Card>
+)
+}
+
 
     export default function DashboardPage() {
         const [employee, setEmployee] = useState<Employee | null>(null)
