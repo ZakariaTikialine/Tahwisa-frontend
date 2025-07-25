@@ -10,21 +10,24 @@ import type { ResultatSelection } from "@/lib/types"
 import { toast } from "sonner"
 import { tokenManager } from "@/lib/auth"
 
-// Mock employee names for the spinning wheel (replace with real data)
-const mockEmployees = [
-    "Ahmed Benali", "Fatima Zahra", "Mohamed Cherif", "Amina Khadija", 
-    "Youssef Amine", "Salma Nour", "Omar Tarek", "Khadija Aicha",
-    "Hassan Ali", "Zineb Malak", "Karim Said", "Layla Rim",
-    "Mehdi Ayoub", "Samira Widad", "Rachid Nabil", "Hanane Ghita"
-]
+interface EligibleEmployee {
+    id: number
+    nom: string
+    prénom: string
+    structue: string
+    session_id: number
+    session_nom: string
+}
 
 export default function WinnersPage() {
 const [winners, setWinners] = useState<ResultatSelection[]>([])
 const [loading, setLoading] = useState(true)
 const [generating, setGenerating] = useState(false)
+const [eligibleEmployees, setEligibleEmployees] = useState<EligibleEmployee[]>([])
 const [currentEmployee, setCurrentEmployee] = useState("")
 const [spinning, setSpinning] = useState(false)
-const [selectedEmployee, setSelectedEmployee] = useState("")
+const [selectedEmployees, setSelectedEmployees] = useState<string[]>([])
+const [currentSelectionIndex, setCurrentSelectionIndex] = useState(0)
 const [isAdmin, setIsAdmin] = useState(false)
 
 useEffect(() => {
@@ -36,6 +39,7 @@ if (employee && employee.role === "admin") {
 
 useEffect(() => {
     fetchWinners()
+    fetchEligibleEmployees()
 }, [])
 
 const fetchWinners = async () => {
@@ -50,61 +54,99 @@ const fetchWinners = async () => {
     }
 }
 
-const spinWheel = () => {
+const fetchEligibleEmployees = async () => {
+    try {
+        const response = await api.get("/resultat-selections/eligible-employees")
+        setEligibleEmployees(response.data)
+    } catch (error) {
+        console.error("Error fetching eligible employees:", error)
+    }
+}
+
+const getEmployeeDisplayNames = () => {
+    return eligibleEmployees.map(emp => `${emp.nom} ${emp.prénom}`)
+}
+
+const spinWheel = (actualWinners: string[]) => {
     return new Promise((resolve) => {
         setSpinning(true)
         let currentIndex = 0
-        const totalSpins = 30 + Math.floor(Math.random() * 20) // 30-50 spins
+        const employeeNames = getEmployeeDisplayNames()
+        
+        if (employeeNames.length === 0) {
+            // Fallback if no eligible employees
+            setCurrentEmployee("No eligible employees")
+            setSpinning(false)
+            resolve("No eligible employees")
+            return
+        }
+
+        const totalSpins = 25 + Math.floor(Math.random() * 15) // 25-40 spins
         let spinCount = 0
 
         const spinInterval = setInterval(() => {
-            setCurrentEmployee(mockEmployees[currentIndex])
-            currentIndex = (currentIndex + 1) % mockEmployees.length
+            setCurrentEmployee(employeeNames[currentIndex])
+            currentIndex = (currentIndex + 1) % employeeNames.length
             spinCount++
 
             // Slow down towards the end
-            if (spinCount > totalSpins - 10) {
+            if (spinCount > totalSpins - 8) {
                 clearInterval(spinInterval)
                 const slowInterval = setInterval(() => {
-                    setCurrentEmployee(mockEmployees[currentIndex])
-                    currentIndex = (currentIndex + 1) % mockEmployees.length
+                    setCurrentEmployee(employeeNames[currentIndex])
+                    currentIndex = (currentIndex + 1) % employeeNames.length
                     spinCount++
 
                     if (spinCount >= totalSpins) {
                         clearInterval(slowInterval)
-                        const finalEmployee = mockEmployees[Math.floor(Math.random() * mockEmployees.length)]
-                        setCurrentEmployee(finalEmployee)
-                        setSelectedEmployee(finalEmployee)
+                        // Show the actual winner from the API response
+                        const actualWinner = actualWinners[currentSelectionIndex] || "Unknown Winner"
+                        setCurrentEmployee(actualWinner)
                         setSpinning(false)
-                        resolve(finalEmployee)
+                        resolve(actualWinner)
                     }
-                }, 200) // Slower speed
+                }, 150) // Slower speed
             }
-        }, 50) // Fast initial speed
+        }, 60) // Fast initial speed
     })
 }
 
 const generateWinners = async () => {
     setGenerating(true)
-    setSelectedEmployee("")
+    setSelectedEmployees([])
+    setCurrentSelectionIndex(0)
     
     try {
         console.log("🟢 Generate clicked")
         
-        // Show the spinning wheel for 3-5 selections
-        const numberOfSelections = 3 + Math.floor(Math.random() * 3)
-        
-        for (let i = 0; i < numberOfSelections; i++) {
-            await new Promise(resolve => setTimeout(resolve, 500)) // Brief pause between selections
-            await spinWheel()
-            await new Promise(resolve => setTimeout(resolve, 1000)) // Show selected name
-        }
-        
-        // Now make the actual API call
+        // First, make the API call to get actual winners
         const res = await api.post("/resultat-selections/winners/generate")
         console.log("✅ Response:", res.data)
-        toast.success("Winners generated successfully")
-        await fetchWinners()
+        
+        if (res.data.selectedEmployees && res.data.selectedEmployees.length > 0) {
+            const actualWinners = res.data.selectedEmployees.map((winner: any) => 
+                `${winner.employee_nom} ${winner.employee_prenom}`
+            )
+            
+            // Show spinning animation for first few winners (max 5 for demo)
+            const winnersToShow = actualWinners.slice(0, Math.min(5, actualWinners.length))
+            
+            for (let i = 0; i < winnersToShow.length; i++) {
+                setCurrentSelectionIndex(i)
+                await new Promise(resolve => setTimeout(resolve, 500)) // Brief pause
+                await spinWheel(actualWinners)
+                
+                setSelectedEmployees(prev => [...prev, winnersToShow[i]])
+                await new Promise(resolve => setTimeout(resolve, 1200)) // Show selected name
+            }
+            
+            toast.success(`Winners generated successfully! ${res.data.totalWinners} total winners selected.`)
+        } else {
+            toast.info("No new winners to generate - all eligible sessions already processed")
+        }
+        
+        await fetchWinners() // Refresh winners list
+        await fetchEligibleEmployees() // Refresh eligible employees
         
     } catch (err) {
         console.error("❌ Error:", err)
@@ -112,7 +154,8 @@ const generateWinners = async () => {
     } finally {
         setGenerating(false)
         setCurrentEmployee("")
-        setSelectedEmployee("")
+        setSelectedEmployees([])
+        setCurrentSelectionIndex(0)
     }
 }
 
@@ -177,7 +220,7 @@ return (
         <p className="text-slate-600">Congratulations to all selected participants!</p>
         
         {isAdmin && (
-            <div className="mb-6">
+            <div className="mb-6 space-y-3">
                 <button
                     onClick={generateWinners}
                     disabled={generating}
@@ -202,6 +245,13 @@ return (
                         </>
                     )}
                 </button>
+                
+                {/* Show eligible employees count */}
+                <div className="text-sm text-slate-600">
+                    {eligibleEmployees.length > 0 && (
+                        <span>📊 {eligibleEmployees.length} employees eligible for selection</span>
+                    )}
+                </div>
             </div>
         )}
 
@@ -210,25 +260,28 @@ return (
             <Card className="mb-8 border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
                 <CardHeader className="text-center">
                     <CardTitle className="text-xl text-blue-900">🎯 Winner Selection in Progress</CardTitle>
+                    <p className="text-sm text-blue-700">
+                        Selecting from {eligibleEmployees.length} eligible employees
+                    </p>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center space-y-6">
                     {/* Spinning Circle */}
                     <div className="relative">
-                        <div className="w-48 h-48 relative">
+                        <div className="w-52 h-52 relative">
                             <div className={`
                                 absolute inset-0 rounded-full border-8 border-blue-200 bg-white shadow-2xl
                                 flex items-center justify-center transition-all duration-300
-                                ${spinning ? 'animate-pulse' : ''}
+                                ${spinning ? 'animate-pulse border-yellow-300' : 'border-blue-200'}
                             `}>
-                                <div className="text-center">
+                                <div className="text-center p-4">
                                     <div className={`
-                                        text-lg font-bold text-blue-900 transition-all duration-150
-                                        ${spinning ? 'scale-110' : 'scale-100'}
+                                        text-base font-bold text-blue-900 transition-all duration-150 leading-tight
+                                        ${spinning ? 'scale-105 text-yellow-600' : 'scale-100'}
                                     `}>
                                         {currentEmployee || "Ready to spin..."}
                                     </div>
                                     {spinning && (
-                                        <div className="text-sm text-blue-600 mt-1">
+                                        <div className="text-sm text-blue-600 mt-2 animate-bounce">
                                             🎲 Selecting...
                                         </div>
                                     )}
@@ -236,50 +289,59 @@ return (
                             </div>
                             
                             {/* Pointer */}
-                            <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-2">
-                                <div className="w-0 h-0 border-l-4 border-r-4 border-b-8 border-l-transparent border-r-transparent border-b-red-500"></div>
+                            <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-3">
+                                <div className="w-0 h-0 border-l-6 border-r-6 border-b-10 border-l-transparent border-r-transparent border-b-red-500 drop-shadow-lg"></div>
                             </div>
                         </div>
                         
-                        {/* Employee Names Around Circle */}
-                        <div className="absolute inset-0 w-48 h-48">
-                            {mockEmployees.slice(0, 8).map((name, index) => {
-                                const angle = (index * 45) - 90 // Distribute around circle
-                                const x = Math.cos(angle * Math.PI / 180) * 110
-                                const y = Math.sin(angle * Math.PI / 180) * 110
+                        {/* Employee Names Around Circle - show actual eligible employees */}
+                        <div className="absolute inset-0 w-52 h-52">
+                            {getEmployeeDisplayNames().slice(0, 8).map((name, index) => {
+                                const angle = (index * 45) - 90
+                                const x = Math.cos(angle * Math.PI / 180) * 125
+                                const y = Math.sin(angle * Math.PI / 180) * 125
                                 
                                 return (
                                     <div
                                         key={index}
                                         className={`
-                                            absolute text-xs font-medium px-2 py-1 rounded-full transition-all duration-200
+                                            absolute text-xs font-medium px-2 py-1 rounded-full transition-all duration-200 whitespace-nowrap
                                             ${currentEmployee === name 
-                                                ? 'bg-yellow-200 text-yellow-800 scale-110 font-bold' 
-                                                : 'bg-gray-100 text-gray-600'
+                                                ? 'bg-yellow-200 text-yellow-800 scale-110 font-bold border-2 border-yellow-400' 
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                             }
                                         `}
                                         style={{
-                                            left: `${96 + x}px`,
-                                            top: `${96 + y}px`,
+                                            left: `${104 + x}px`,
+                                            top: `${104 + y}px`,
                                             transform: 'translate(-50%, -50%)'
                                         }}
                                     >
-                                        {name.split(' ')[0]}
+                                        {name.split(' ')[0]} {name.split(' ')[1]?.[0]}.
                                     </div>
                                 )
                             })}
                         </div>
                     </div>
 
+                    {/* Selected Winners Display */}
+                    {selectedEmployees.length > 0 && (
+                        <div className="w-full max-w-md">
+                            <div className="text-center mb-3">
+                                <h3 className="font-semibold text-green-800">🎉 Selected Winners</h3>
+                            </div>
+                            <div className="space-y-2 max-h-32 overflow-y-auto">
+                                {selectedEmployees.map((winner, index) => (
+                                    <div key={index} className="bg-green-100 border border-green-300 rounded-lg p-2 text-center">
+                                        <div className="text-green-700 font-semibold text-sm">{winner}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    
                     {/* Status */}
                     <div className="text-center">
-                        {selectedEmployee && !spinning && (
-                            <div className="bg-green-100 border border-green-300 rounded-lg p-4 max-w-sm">
-                                <div className="text-green-800 font-semibold">🎉 Selected!</div>
-                                <div className="text-green-700 font-bold text-lg">{selectedEmployee}</div>
-                            </div>
-                        )}
-                        
                         {spinning && (
                             <div className="text-blue-600 font-medium">
                                 <div className="flex items-center justify-center gap-2">
@@ -302,6 +364,11 @@ return (
             <Trophy className="h-16 w-16 text-slate-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-slate-900 mb-2">No Winners Yet</h3>
             <p className="text-slate-600">Winners will be announced once the selection process is complete.</p>
+            {eligibleEmployees.length > 0 && (
+                <p className="text-sm text-blue-600 mt-2">
+                    {eligibleEmployees.length} employees are currently eligible for selection
+                </p>
+            )}
             </CardContent>
         </Card>
         ) : (
