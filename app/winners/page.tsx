@@ -14,7 +14,7 @@ interface EligibleEmployee {
     id: number
     nom: string
     prénom: string
-    structue: string
+    structure: string
     session_id: number
     session_nom: string
 }
