@@ -206,19 +206,19 @@ return (
             <table className="w-full">
             <thead>
                 <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Nom</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Prénom</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Matricule</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Structure</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Email</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Téléphone</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase">Nom</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase">Prénom</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase">Matricule</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase">Structure</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase">Email</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase">Téléphone</th>
                 </tr>
                 <tr className="bg-gray-50">
                 {Object.entries(empFilters).map(([key, val]) => (
-                    <th key={key} className="px-6 py-2">
+                    <th key={key} className="">
                     <input
-                        className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
-                        placeholder="🔍"
+                        className="w-full border border-gray-200 rounded px-2 py-1 text-sm text-black"
+                        placeholder="Filtrer..."
                         value={val}
                         onChange={e => handleEmpFilterChange(key as keyof typeof empFilters, e.target.value)}
                     />
@@ -228,7 +228,7 @@ return (
             </thead>
             <tbody>
                 {filteredEmployees.map((emp, index) => (
-                <tr key={index} className="hover:bg-gray-50">
+                <tr key={index} className="hover:bg-black">
                     <td className="px-6 py-4 whitespace-nowrap">{emp.nom}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{emp.prénom}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{emp.matricule}</td>
