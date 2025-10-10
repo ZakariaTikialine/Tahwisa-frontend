@@ -71,8 +71,8 @@ A modern frontend application for the Tahwisa platform, built with Next.js 14 Ap
 ├── lib/                # API utilities & token management
 │   ├── api.js          # Axios configuration
 │   └── auth.js         # Authentication helpers
-├── public/             # Static assets
-└── types/              # TypeScript definitions
+└── public/             # Static assets
+
 ```
 
 ## 🔧 Available Scripts
